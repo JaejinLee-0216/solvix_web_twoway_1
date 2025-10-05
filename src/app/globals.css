@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* Design tokens */
+:root {
+  --bg: #020103; /* Desktop frame fill */
+  --fg: #ffffff;
+  --muted: #b3b3b3;
+  --subtle: #666f8d;
+
+  /* Gradients */
+  --gradient-gold: radial-gradient(circle at 50% 50%, rgba(125,71,2,1) 0%, rgba(253,210,101,1) 62%, rgba(104,62,8,1) 100%);
+  --gradient-premium: linear-gradient(148deg, rgba(210,224,237,1) 9%, rgba(191,200,231,1) 19%, rgba(203,205,252,1) 49%, rgba(195,173,203,1) 73%, rgba(150,153,181,1) 96%);
+  --gradient-primary: linear-gradient(180deg, rgba(43,122,251,1) 0%, rgba(33,116,253,1) 100%);
+  --gradient-primary-border: linear-gradient(180deg, rgba(23,75,210,1) 0%, rgba(27,90,194,1) 100%);
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-plus-jakarta);
+  --font-serif: var(--font-source-serif);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Utilities mapping Figma styles */
+.premium-text {
+  background: var(--gradient-premium);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-text {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-primary-bg {
+  background: var(--gradient-primary);
+}
+
+.btn-primary-border {
+  border-image: var(--gradient-primary-border) 1;
+}
+
+.container-1200 {
+  width: 1200px; /* fixed desktop artboard width so zoom keeps center + sizes */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Pre-scaffold mobile container (390px logical width) */
+.container-390 {
+  max-width: 390px;
+  margin-left: auto;
+  margin-right: auto;
+}
