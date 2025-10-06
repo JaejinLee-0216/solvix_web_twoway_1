@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { VertexAI } from "@google-cloud/vertexai";
+import { readFileSync } from "fs";
 
 export const runtime = "nodejs";
 
@@ -7,6 +8,31 @@ function getEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing env var: ${name}`);
   return v;
+}
+
+function resolveServiceAccountCredentials(): { client_email: string; private_key: string } | undefined {
+  const inlineJson = process.env.GCP_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (inlineJson) {
+    try {
+      return JSON.parse(inlineJson);
+    } catch (error) {
+      console.error("Failed to parse inline Google credentials JSON", error);
+      throw new Error("Invalid service account JSON provided in environment variable");
+    }
+  }
+
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credentialsPath) {
+    try {
+      const data = readFileSync(credentialsPath, "utf8");
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Failed to read GOOGLE_APPLICATION_CREDENTIALS file", error);
+      throw new Error("Unable to read service account file at GOOGLE_APPLICATION_CREDENTIALS path");
+    }
+  }
+
+  return undefined;
 }
 
 export async function POST(req: NextRequest) {
@@ -27,7 +53,18 @@ export async function POST(req: NextRequest) {
   const endpointId = getEnv("VERTEX_ENDPOINT_ID");
 
   // Initialize Vertex AI
-  const vertex = new VertexAI({ project, location });
+  const credentials = resolveServiceAccountCredentials();
+  if (!credentials) {
+    throw new Error("Google Cloud service account credentials not configured. Set GCP_SERVICE_ACCOUNT_JSON or GOOGLE_APPLICATION_CREDENTIALS_JSON in Vercel environment.");
+  }
+
+  const vertex = new VertexAI({
+    project,
+    location,
+    googleAuthOptions: {
+      credentials,
+    },
+  });
   const endpointPath = `projects/${project}/locations/${location}/endpoints/${endpointId}`;
   const generativeModel = vertex.getGenerativeModel({ model: endpointPath });
 
@@ -117,7 +154,12 @@ export async function POST(req: NextRequest) {
     );
   } catch (err: any) {
     console.error("Vertex AI error", err);
-    return new Response(JSON.stringify({ error: "Vertex AI request failed" }), { status: 500 });
+    const message = err?.message || "Vertex AI request failed";
+    const details = err?.response?.error ?? err?.stack ?? null;
+    return new Response(
+      JSON.stringify({ error: "Vertex AI request failed", message, details }),
+      { status: 500, headers: { "content-type": "application/json" } }
+    );
   }
 }
 
