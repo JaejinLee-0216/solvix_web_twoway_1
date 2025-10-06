@@ -475,6 +475,25 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
+                        {copiedMessageId === m.id && (
+                          <span className="absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-blue-600/95 text-white shadow animate-fade-in-out">
+                            복사가 완료되었습니다!
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleCopy(m.text, m.id)}
+                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -515,6 +534,25 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
+                        {copiedMessageId === m.id && (
+                          <span className="absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-blue-600/95 text-white shadow animate-fade-in-out">
+                            복사가 완료되었습니다!
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleCopy(m.text, m.id)}
+                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
                     {m.image && (
                       <div className="mb-2">
                         <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
