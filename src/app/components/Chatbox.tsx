@@ -18,6 +18,14 @@ type Message = {
   image?: string;
   visualization?: D3VisualizationData | null;
   showVisualization?: boolean;
+  id: string;
+};
+
+const generateId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
 export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest }: Props) {
@@ -42,6 +50,27 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [visualizingInterval, setVisualizingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [visualizingMessageIndex, setVisualizingMessageIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = async (value: string) => {
+    if (!value) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+    } catch (error) {
+      console.error("Copy failed", error);
+    }
+  };
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -116,16 +145,16 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     onStartConversation?.();
     
     // Add user message with image if present
-    const userMessage: Message = { role: 'user', text };
+    const userMessageBase = { role: 'user' as const, text };
     if (image) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageData = e.target?.result as string;
-        setMessages((m) => [...m, { ...userMessage, image: imageData }]);
+        setMessages((m) => [...m, { ...userMessageBase, image: imageData, id: generateId() }]);
       };
       reader.readAsDataURL(image);
     } else {
-      setMessages((m) => [userMessage]);
+      setMessages((m) => (m.length === 0 ? [{ ...userMessageBase, id: generateId() }] : [...m, { ...userMessageBase, id: generateId() }]));
     }
     
     // Clear chatbox immediately
@@ -158,7 +187,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       if (normalizedAnswer) {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', text: normalizedAnswer, showVisualization: false, visualization: null },
+          { role: 'assistant', text: normalizedAnswer, showVisualization: false, visualization: null, id: generateId() },
         ]);
       }
       setDaily((d) => ({ ...d, used: Math.min(d.used + 1, d.max) }));
@@ -319,7 +348,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         <div className="absolute left-[29px] bottom-[11px] right-[29px] flex items-center justify-between">
           <div className="flex items-center gap-2">
             {/* full-SVG buttons per design */}
-            <button onClick={handleImagePick} aria-label="이미지 첨부" className="cursor-pointer">
+            <button
+              onClick={handleImagePick}
+              aria-label="이미지 첨부"
+              className="cursor-pointer relative -translate-y-[3px]"
+            >
               <img 
                 src={image ? "/assets/desktop/chat-input-image-1.svg" : "/assets/desktop/chat-input-image.svg"} 
                 alt="이미지 첨부" 
@@ -330,13 +363,13 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
             
             {/* Model Select with Dropdown */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => {
                   setShowModelDropdown(!showModelDropdown);
                   setShowStyleDropdown(false);
                 }} 
                 aria-label="모델 선택" 
-                className="cursor-pointer"
+                className="cursor-pointer relative -translate-y-[0px]"
               >
                 <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={130} height={34} />
               </button>
@@ -365,13 +398,13 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
             
             {/* Style Select with Dropdown */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => {
                   setShowStyleDropdown(!showStyleDropdown);
                   setShowModelDropdown(false);
                 }} 
                 aria-label="해설 스타일" 
-                className="cursor-pointer"
+                className="cursor-pointer relative -translate-y-[0px]"
               >
                 <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={101} height={34} />
               </button>
@@ -402,7 +435,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
             <div className="text-[12px] text-[#666F8D]">
               하루 이용 횟수 {daily.used}/{daily.max}
             </div>
-            <button onClick={handleSubmit} className="cursor-pointer">
+            <button onClick={handleSubmit} className="cursor-pointer relative -translate-y-[2px]">
               <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={42} height={42} />
             </button>
           </div>
@@ -415,7 +448,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
           <div className="flex flex-col gap-4 p-4 h-full overflow-y-auto">
             <div className="flex flex-col gap-4 w-full">
               {messages.map((m, i) => (
-                <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+                <div key={m.id ?? i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                   <div className={`inline-block max-w-[80%] px-4 py-3 rounded-[10px] ${m.role === 'user' ? 'bg-[#262626]' : 'bg-[#141414] border border-white/10'}`}>
                     {m.image && (
                       <div className="mb-2">
@@ -423,6 +456,35 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 text-right flex justify-end">
+                        <button
+                          onClick={() => handleCopy(m.text)}
+                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 text-right flex justify-end">
+                        <button
+                          onClick={() => handleCopy(m.text)}
+                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-300 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -454,7 +516,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         <div className="absolute left-[171px] top-[130px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
           <div className="flex flex-col gap-4 p-4">
             {messages.map((m, i) => (
-              <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+              <div key={m.id ?? i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                 <div className="inline-block max-w-[90%]">
                   <div className={`px-4 py-3 rounded-[10px] ${m.role === 'user' ? 'bg-[#262626]' : 'bg-[#141414] border border-white/10'}`}>
                     {m.image && (
@@ -463,6 +525,40 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 text-right flex justify-end">
+                        <button
+                          onClick={() => navigator.clipboard.writeText(m.text).catch(err => console.error('Copy failed', err))}
+                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
+                    {m.image && (
+                      <div className="mb-2">
+                        <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                      </div>
+                    )}
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    {m.role === 'assistant' && (
+                      <div className="mt-2 text-right flex justify-end">
+                        <button
+                          onClick={() => navigator.clipboard.writeText(m.text).catch(err => console.error('Copy failed', err))}
+                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-300 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          복사
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   {/* 시각화 버튼 및 시각화 (AI 답변에만 표시) */}
