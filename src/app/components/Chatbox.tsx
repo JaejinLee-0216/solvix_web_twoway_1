@@ -10,6 +10,8 @@ type Props = {
   onReset?: () => void;
   isLoggedIn?: boolean;
   onLoginRequest?: () => void;
+  variant?: "desktop" | "mobile";
+  className?: string;
 };
 
 type Message = {
@@ -28,7 +30,7 @@ const generateId = () => {
   return `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest }: Props) {
+export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest, variant = "desktop", className }: Props) {
   const [text, setText] = useState("");
   const [model, setModel] = useState("SOLVIX 1.0");
   const [style, setStyle] = useState("해설지");
@@ -339,44 +341,66 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     }
   };
 
+  const isMobile = variant === "mobile";
+
+  const containerClasses = isMobile
+    ? "relative rounded-[20px] border border-white/15 bg-white/5 p-4"
+    : "absolute left-[171px] top-[490px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]";
+
+  const textareaClasses = isMobile
+    ? "w-full resize-none rounded-[14px] border border-white/15 bg-black/40 p-3 text-sm text-white placeholder:text-white/40 outline-none"
+    : "absolute left-[31px] top-[23px] right-[29px] bottom-[56px] resize-none outline-none text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D]";
+
+  const bottomBarClasses = isMobile
+    ? "mt-3 flex items-center justify-between"
+    : "absolute left-[29px] bottom-[11px] right-[29px] flex items-center justify-between";
+
+  const dailyUsageClasses = isMobile ? "text-[11px] text-white/60" : "text-[12px] text-[#666F8D]";
+
+  const sendButtonClasses = isMobile ? "rounded-full bg-[#0075DC] p-3" : "cursor-pointer relative -translate-y-[2px]";
+
+  const imagePreviewClasses = isMobile
+    ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-white/20 bg-black/60 shadow-lg overflow-hidden"
+    : "absolute left-[171px] top-[410px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
+
+  const removeButtonClasses = isMobile
+    ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center text-[14px]"
+    : "absolute top-[2px] right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
+
   return (
-    <>
+    <div className={className}>
       {/* Image preview overlay */}
       {imagePreview && (
-        <div className="absolute left-[171px] top-[410px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden">
+        <div className={imagePreviewClasses}>
           <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-          <button
-            onClick={handleRemoveImage}
-            className="absolute top-[2px] right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer"
-          >
-            ×
-          </button>
+          <button onClick={handleRemoveImage} className={removeButtonClasses}>×</button>
         </div>
       )}
-      
-      <div className="absolute left-[171px] top-[490px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]">
+
+      <div className={containerClasses}>
         <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
         {/* text input area */}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="문제 사진만 올려도 OK! 추가 질문도 입력해보세요"
-          className="absolute left-[31px] top-[23px] right-[29px] bottom-[56px] resize-none outline-none text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D]"
+          className={textareaClasses}
+          rows={isMobile ? 4 : undefined}
         />
         {/* bottom actions */}
-        <div className="absolute left-[29px] bottom-[11px] right-[29px] flex items-center justify-between">
+        <div className={bottomBarClasses}>
           <div className="flex items-center gap-2">
             {/* full-SVG buttons per design */}
             <button
               onClick={handleImagePick}
               aria-label="이미지 첨부"
-              className="cursor-pointer relative -translate-y-[3px]"
+              className="cursor-pointer"
             >
               <img 
                 src={image ? "/assets/desktop/chat-input-image-1.svg" : "/assets/desktop/chat-input-image.svg"} 
                 alt="이미지 첨부" 
-                width={78} 
-                height={42} 
+                width={isMobile ? 62 : 78}
+                height={isMobile ? 34 : 42}
               />
             </button>
             
@@ -388,9 +412,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                   setShowStyleDropdown(false);
                 }} 
                 aria-label="모델 선택" 
-                className="cursor-pointer relative -translate-y-[0px]"
+                className="cursor-pointer"
               >
-                <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={130} height={34} />
+                <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={isMobile ? 110 : 130} height={isMobile ? 30 : 34} />
               </button>
               {showModelDropdown && (
                 <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
@@ -423,9 +447,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                   setShowModelDropdown(false);
                 }} 
                 aria-label="해설 스타일" 
-                className="cursor-pointer relative -translate-y-[0px]"
+                className="cursor-pointer"
               >
-                <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={101} height={34} />
+                <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={isMobile ? 88 : 101} height={isMobile ? 28 : 34} />
               </button>
               {showStyleDropdown && (
                 <div className="absolute bottom-full left-0 mb-2 w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
@@ -451,11 +475,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-[12px] text-[#666F8D]">
+            <div className={dailyUsageClasses}>
               하루 이용 횟수 {daily.used}/{daily.max}
             </div>
-            <button onClick={handleSubmit} className="cursor-pointer relative -translate-y-[2px]">
-              <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={42} height={42} />
+            <button onClick={handleSubmit} className={sendButtonClasses}>
+              <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={isMobile ? 30 : 42} height={isMobile ? 30 : 42} />
             </button>
           </div>
         </div>
@@ -611,7 +635,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
           onLoginRequest?.();
         }}
       />
-    </>
+    </div>
   );
 }
 

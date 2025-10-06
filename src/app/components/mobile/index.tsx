@@ -1,5 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import Chatbox from "../Chatbox";
+import KakaoLoginPopup from "../KakaoLoginPopup";
 
 const heroBadges = [
   "수능 수학 AI 튜터",
@@ -12,11 +14,6 @@ const featureModes = [
   { label: "문제 오류", active: false }
 ];
 
-const chatPreview = {
-  placeholder: "2025 수능 대비 함수 f(x)=x^3-6x의 극값과 그래프 특징을 설명해 주세요.",
-  model: "SOLVIX 1.0",
-  style: "해설지"
-};
 
 const testimonials = [
   {
@@ -72,6 +69,66 @@ const expertLogos = [
 
 export default function MobileLandingPlaceholder() {
   const year = new Date().getFullYear();
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
+
+  const handleChatStart = () => {};
+  const handleChatReset = () => {};
+  const handleLoginRequest = () => setShowLoginPopup(true);
+
+  const syncLoginState = useCallback((info: any) => {
+    if (info) {
+      setIsLoggedIn(true);
+      setUserInfo(info);
+      localStorage.setItem("userInfo", JSON.stringify(info));
+    } else {
+      setIsLoggedIn(false);
+      setUserInfo(null);
+      localStorage.removeItem("userInfo");
+    }
+  }, []);
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch('/api/auth/user');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            syncLoginState(data.user);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Login check failed:', error);
+      }
+      const saved = localStorage.getItem('userInfo');
+      if (saved) {
+        syncLoginState(JSON.parse(saved));
+      }
+    };
+    check();
+  }, [syncLoginState]);
+
+  const handleLoginClick = () => {
+    if (isLoggedIn) {
+      fetch('/api/auth/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' })
+      }).finally(() => {
+        syncLoginState(null);
+      });
+    } else {
+      setShowLoginPopup(true);
+    }
+  };
+
+  const handleLoginSuccess = (info: any) => {
+    syncLoginState(info);
+    setShowLoginPopup(false);
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#03050A] text-white">
@@ -79,9 +136,9 @@ export default function MobileLandingPlaceholder() {
       <header className="px-5 pt-10 pb-6">
         <div className="flex items-center justify-between">
           <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={128} height={34} priority />
-          <Link href="#login" className="text-sm font-semibold text-[#0075DC] underline">
-            로그인
-          </Link>
+          <button onClick={handleLoginClick} className="text-sm font-semibold text-[#0075DC] underline">
+            {isLoggedIn ? '로그아웃' : '로그인'}
+          </button>
         </div>
 
         <div className="mt-7 space-y-3">
@@ -120,32 +177,14 @@ export default function MobileLandingPlaceholder() {
       </section>
 
       {/* Chat preview */}
-      <section className="px-5 mt-6">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <textarea
-            readOnly
-            rows={4}
-            value={chatPreview.placeholder}
-            className="w-full resize-none rounded-xl border border-white/15 bg-black/40 p-4 text-sm text-white outline-none"
-          />
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/70">
-                <Image src="/assets/desktop/chat-input-image.svg" alt="이미지" width={20} height={20} />
-                0/1
-              </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/70">
-                <Image src="/assets/desktop/chat-model-select.svg" alt="모델" width={110} height={26} />
-              </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs text-white/70">
-                <Image src="/assets/desktop/chat-style-select.svg" alt="스타일" width={90} height={26} />
-              </button>
-            </div>
-            <button className="rounded-full bg-[#0075DC] p-3">
-              <Image src="/assets/desktop/chat-send-button.svg" alt="전송" width={24} height={24} />
-            </button>
-          </div>
-        </div>
+      <section className="px-5 mt-6 relative">
+        <Chatbox
+          variant="mobile"
+          isLoggedIn={isLoggedIn}
+          onStartConversation={handleChatStart}
+          onReset={handleChatReset}
+          onLoginRequest={handleLoginRequest}
+        />
       </section>
 
       {/* Score card */}
@@ -226,6 +265,12 @@ export default function MobileLandingPlaceholder() {
           <span>이용 약관 · 개인정보 처리방침</span>
         </div>
       </footer>
+
+      <KakaoLoginPopup
+        isOpen={showLoginPopup}
+        onClose={() => setShowLoginPopup(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }
