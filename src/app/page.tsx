@@ -9,8 +9,8 @@ import MobileLandingPlaceholder from "./components/mobile";
 export default function Home() {
   return (
     <>
-      {/* Desktop only for now. We will switch based on width later. */}
-      <main className="block">
+      {/* Desktop layout */}
+      <main className="hidden md:block">
         <Hero />
         <Companies />
         <Clients />
@@ -18,10 +18,11 @@ export default function Home() {
         <CTA />
         <Footer />
       </main>
-      {/* Placeholder mobile container for future work */}
-      <div className="hidden">
+
+      {/* Mobile layout */}
+      <section className="block md:hidden">
         <MobileLandingPlaceholder />
-      </div>
+      </section>
     </>
   );
 }

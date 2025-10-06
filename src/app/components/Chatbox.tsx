@@ -49,9 +49,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [visualizingTime, setVisualizingTime] = useState(0);
   const [visualizingInterval, setVisualizingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [visualizingMessageIndex, setVisualizingMessageIndex] = useState<number | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCopy = async (value: string) => {
+  const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
     try {
       if (navigator?.clipboard?.writeText) {
@@ -67,10 +69,27 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         document.execCommand("copy");
         document.body.removeChild(textarea);
       }
+      if (messageId) {
+        setCopiedMessageId(messageId);
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+        }
+        copyTimeoutRef.current = setTimeout(() => {
+          setCopiedMessageId((current) => (current === messageId ? null : current));
+        }, 1000);
+      }
     } catch (error) {
       console.error("Copy failed", error);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -456,35 +475,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
-                    {m.role === 'assistant' && (
-                      <div className="mt-2 text-right flex justify-end">
-                        <button
-                          onClick={() => handleCopy(m.text)}
-                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          복사
-                        </button>
-                      </div>
-                    )}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
-                    {m.role === 'assistant' && (
-                      <div className="mt-2 text-right flex justify-end">
-                        <button
-                          onClick={() => handleCopy(m.text)}
-                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-300 transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          복사
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -525,38 +515,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                       </div>
                     )}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
-                    {m.role === 'assistant' && (
-                      <div className="mt-2 text-right flex justify-end">
-                        <button
-                          onClick={() => navigator.clipboard.writeText(m.text).catch(err => console.error('Copy failed', err))}
-                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          복사
-                        </button>
-                      </div>
-                    )}
                     {m.image && (
                       <div className="mb-2">
                         <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
-                      </div>
-                    )}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
-                    {m.role === 'assistant' && (
-                      <div className="mt-2 text-right flex justify-end">
-                        <button
-                          onClick={() => navigator.clipboard.writeText(m.text).catch(err => console.error('Copy failed', err))}
-                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-300 transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          복사
-                        </button>
                       </div>
                     )}
                   </div>

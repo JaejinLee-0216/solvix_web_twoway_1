@@ -19,7 +19,7 @@ export default function SvgButton({ src, alt, width, height, selected, onClick, 
     >
       {/* selection ring */}
       {selected ? (
-        <span className="absolute inset-[-2px] rounded-[10px] ring-2 ring-sky-400 pointer-events-none" />
+        <span className="absolute inset-[3px] rounded-[8px] ring-3 ring-sky-400 pointer-events-none" />
       ) : null}
       <img src={src} alt={alt} width={width} height={height} />
     </button>
