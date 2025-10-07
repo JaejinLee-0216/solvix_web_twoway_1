@@ -191,23 +191,25 @@ export default function MobileLandingPlaceholder() {
           </div>
         </div>
 
-        <div className="mt-7 space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            {heroBadges.map((badge) => (
-              <span key={badge} className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/70">
-                {badge}
-              </span>
-            ))}
+        {!showChatWindow && (
+          <div className="mt-7 space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              {heroBadges.map((badge) => (
+                <span key={badge} className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/70">
+                  {badge}
+                </span>
+              ))}
+            </div>
+            <h1 className="text-[28px] font-semibold leading-[1.3]">
+              킬러 문항,
+              <br /> 더 이상 두렵지 않게.
+            </h1>
+            <p className="text-[14px] leading-[1.6] text-white/70">
+              평가원의 출제 의도까지 짚어주는 SOLVIX.
+              <br /> 수능 전문가와 AI가 함께 만든 맞춤형 풀이를 경험하세요.
+            </p>
           </div>
-          <h1 className="text-[28px] font-semibold leading-[1.3]">
-            킬러 문항,
-            <br /> 더 이상 두렵지 않게.
-          </h1>
-          <p className="text-[14px] leading-[1.6] text-white/70">
-            평가원의 출제 의도까지 짚어주는 SOLVIX.
-            <br /> 수능 전문가와 AI가 함께 만든 맞춤형 풀이를 경험하세요.
-          </p>
-        </div>
+        )}
       </header>
 
       {!showChatWindow && (
@@ -241,17 +243,17 @@ export default function MobileLandingPlaceholder() {
         </>
       )}
 
-      {showChatWindow && (
-        <section className="px-5 mt-6">
-          <Chatbox
-            variant="mobile"
-            isLoggedIn={isLoggedIn}
-            onStartConversation={handleChatStart}
-            onReset={handleChatReset}
-            onLoginRequest={handleLoginRequest}
-          />
-        </section>
-      )}
+{showChatWindow && (
+  <section className="px-5 mt-8">
+    <Chatbox
+      variant="mobile"
+      isLoggedIn={isLoggedIn}
+      onStartConversation={handleChatStart}
+      onReset={handleChatReset}
+      onLoginRequest={handleLoginRequest}
+    />
+  </section>
+)}
 
       {/* Score card */}
       <section className="px-5 mt-10">
