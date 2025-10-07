@@ -264,9 +264,15 @@ export default function MobileLandingPlaceholder() {
         </div>
         {plans.map((plan) => (
           <div key={plan.name} className="rounded-2xl border border-white/10 p-4">
-            <div className="flex gap-3">
-              <Image src={plan.svg} alt={`${plan.name} plan`} width={92} height={120} className="w-[92px]" />
-              <div className="flex-1 space-y-1">
+            <div>
+              <Image
+                src={plan.svg}
+                alt={`${plan.name} plan`}
+                width={292}
+                height={431}
+                className="w-full h-auto"
+              />
+              <div className="mt-4 space-y-2">
                 {plan.badge ? <span className="text-xs text-[#FFCE4E]">{plan.badge}</span> : null}
                 <h3 className="text-lg font-semibold">{plan.name}</h3>
                 <p className="text-xs text-white/60 leading-[1.6]">{plan.highlight}</p>

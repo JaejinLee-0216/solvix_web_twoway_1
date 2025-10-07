@@ -363,7 +363,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
 
   const dailyUsageClasses = isMobile ? "text-[11px] text-[#666F8D]" : "text-[12px] text-[#666F8D]";
 
-  const sendButtonClasses = isMobile ? "rounded-full bg-[#0075DC] p-3" : "cursor-pointer relative -translate-y-[2px]";
+  const sendButtonClasses = isMobile ? "cursor-pointer" : "cursor-pointer relative -translate-y-[2px]";
 
   const imagePreviewClasses = isMobile
     ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-lg overflow-hidden"
