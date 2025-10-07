@@ -84,8 +84,15 @@ export default function MobileLandingPlaceholder() {
   const [showMyPage, setShowMyPage] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  const handleChatStart = () => {};
-  const handleChatReset = () => {};
+  const [showChatWindow, setShowChatWindow] = useState(false);
+
+  const handleChatStart = () => {
+    setShowChatWindow(true);
+  };
+
+  const handleChatReset = () => {
+    setShowChatWindow(false);
+  };
   const handleLoginRequest = () => setShowLoginPopup(true);
 
   const syncLoginState = useCallback((info: any) => {
@@ -203,32 +210,48 @@ export default function MobileLandingPlaceholder() {
         </div>
       </header>
 
-      {/* Mode selection */}
-      <section className="px-5">
-        <div className="flex gap-2">
-          {featureModes.map((mode) => (
-            <button
-              key={mode.label}
-              className={`flex-1 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
-                mode.active ? "border border-[#3BA7FF] bg-[#0A1625] text-[#CFEAFF]" : "border border-white/10 text-white/40"
-              }`}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {!showChatWindow && (
+        <>
+          {/* Mode selection */}
+          <section className="px-5">
+            <div className="flex gap-2">
+              {featureModes.map((mode, index) => (
+                <button
+                  key={mode.label}
+                  className={`flex-1 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+                    index === 0 ? "border border-[#3BA7FF] bg-[#0A1625] text-[#CFEAFF]" : "border border-white/10 text-white/40"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
-      {/* Chat preview */}
-      <section className="px-5 mt-6">
-        <Chatbox
-          variant="mobile"
-          isLoggedIn={isLoggedIn}
-          onStartConversation={handleChatStart}
-          onReset={handleChatReset}
-          onLoginRequest={handleLoginRequest}
-        />
-      </section>
+          {/* Chat preview */}
+          <section className="px-5 mt-6">
+            <Chatbox
+              variant="mobile"
+              isLoggedIn={isLoggedIn}
+              onStartConversation={handleChatStart}
+              onReset={handleChatReset}
+              onLoginRequest={handleLoginRequest}
+            />
+          </section>
+        </>
+      )}
+
+      {showChatWindow && (
+        <section className="px-5 mt-6">
+          <Chatbox
+            variant="mobile"
+            isLoggedIn={isLoggedIn}
+            onStartConversation={handleChatStart}
+            onReset={handleChatReset}
+            onLoginRequest={handleLoginRequest}
+          />
+        </section>
+      )}
 
       {/* Score card */}
       <section className="px-5 mt-10">

@@ -388,11 +388,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     ? "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-[#0075DC] text-white shadow animate-fade-in-out"
     : "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-blue-600/95 text-white shadow animate-fade-in-out";
   const conversationContainerClasses = isMobile
-    ? "mt-5 max-h-[320px] overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-[#BFD4F0] scrollbar-track-transparent"
+    ? "mt-5 max-h-[360px] overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-[#BFD4F0] scrollbar-track-transparent"
     : "absolute left-[171px] top-[130px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800";
-  const conversationInnerClasses = isMobile ? "flex flex-col gap-4" : "flex flex-col gap-4 p-4";
+  const conversationInnerClasses = isMobile ? "flex flex-col gap-4 px-2" : "flex flex-col gap-4 p-4";
   const loadingOverlayClasses = isMobile
-    ? "fixed inset-0 bg-black/75 backdrop-blur-sm flex flex-col z-50 px-5 py-8"
+    ? "absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col z-40 px-6 py-8"
     : "absolute left-[171px] top-[130px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg";
   const loadingHistoryClasses = isMobile
     ? "flex-1 overflow-y-auto flex flex-col gap-4 w-full"
@@ -409,17 +409,232 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const spinnerDotStyle = isMobile ? "w-2 h-2 bg-white rounded-full animate-bounce" : "w-2 h-2 bg-white rounded-full animate-bounce";
   const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
 
+  if (isMobile) {
+    const mobileMessages = messages.map((m, i) => (
+      <div key={m.id ?? i} className={m.role === "user" ? "text-right" : "text-left"}>
+        <div className={messageOuterClass}>
+          <div className={`${bubbleBaseClasses} ${m.role === "user" ? bubbleStyles.user : bubbleStyles.assistant}`}>
+            {m.image ? (
+              <div className="mb-2">
+                <img src={m.image} alt="attached" className="max-w-full max-h-[200px] object-contain rounded" />
+              </div>
+            ) : null}
+            <MathRenderer text={m.text} className={messageTextClass} />
+            {m.role === "assistant" ? (
+              <>
+                <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
+                  {copiedMessageId === m.id ? <span className={copyToastClass}>복사가 완료되었습니다!</span> : null}
+                  <button onClick={() => handleCopy(m.text, m.id)} className={copyButtonClass}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    복사
+                  </button>
+                </div>
+                <div className="mt-2">
+                  {isVisualizing && visualizingMessageIndex === i ? (
+                    <div className="flex items-center gap-2 text-xs text-blue-600">
+                      <div className="flex space-x-1">
+                        <div className={spinnerDotStyle}></div>
+                        <div className={spinnerDotStyle} style={{ animationDelay: "0.1s" }}></div>
+                        <div className={spinnerDotStyle} style={{ animationDelay: "0.2s" }}></div>
+                      </div>
+                      <span>시각화 중... {visualizingTime}초</span>
+                    </div>
+                  ) : !m.showVisualization ? (
+                    <button
+                      onClick={() => handleVisualize(i)}
+                      className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+                      disabled={isVisualizing}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      시각화
+                    </button>
+                  ) : m.visualization ? (
+                    <div className="mt-2">
+                      <D3Visualization
+                        visualData={m.visualization}
+                        width={visualizationDimensions.width}
+                        height={visualizationDimensions.height}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    ));
+
+    const renderMobileMessages = () => (
+      <>
+        {mobileMessages}
+        <div ref={messagesEndRef} />
+      </>
+    );
+
+    return (
+      <div className="relative">
+        <div className="space-y-4">
+          {imagePreview ? (
+            <div className={imagePreviewClasses}>
+              <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+              <button onClick={handleRemoveImage} className={removeButtonClasses}>
+                ×
+              </button>
+            </div>
+          ) : null}
+
+          {conversationMode && !isLoading ? (
+            <div ref={mobileWrapperRef} className="rounded-2xl border border-white/10 bg-[#0A1625] p-4 max-h-[360px] overflow-y-auto space-y-4">
+              {renderMobileMessages()}
+            </div>
+          ) : null}
+
+          <div
+            className={containerClasses}
+            onClick={() => {
+              mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
+            }}
+          >
+            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="문제 사진만 올려도 OK! 추가 질문도 입력해보세요"
+              className={textareaClasses}
+              rows={4}
+            />
+            <div className={bottomBarClasses}>
+              <div className="flex items-center gap-2">
+                <button onClick={handleImagePick} aria-label="이미지 첨부" className="cursor-pointer">
+                  <img src={image ? "/assets/desktop/chat-input-image-1.svg" : "/assets/desktop/chat-input-image.svg"} alt="이미지 첨부" width={62} height={34} />
+                </button>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowModelDropdown(!showModelDropdown);
+                      setShowStyleDropdown(false);
+                    }}
+                    aria-label="모델 선택"
+                    className="cursor-pointer"
+                  >
+                    <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={110} height={30} />
+                  </button>
+                  {showModelDropdown ? (
+                    <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
+                      <button
+                        onClick={() => {
+                          setModel("SOLVIX 1.0");
+                          setShowModelDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === "SOLVIX 1.0" ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                      >
+                        <img src="/assets/desktop/brain_icon.svg" alt="SOLVIX 1.0" className="w-6 h-6" />
+                        <span className="font-medium">SOLVIX 1.0</span>
+                      </button>
+                      <button disabled className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400">
+                        <img src="/assets/desktop/wing_icon_blue.png" alt="SOLVIX 1.0 LITE" className="w-6 h-6" />
+                        <span className="font-medium">SOLVIX 1.0 LITE</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowStyleDropdown(!showStyleDropdown);
+                      setShowModelDropdown(false);
+                    }}
+                    aria-label="해설 스타일"
+                    className="cursor-pointer"
+                  >
+                    <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={88} height={28} />
+                  </button>
+                  {showStyleDropdown ? (
+                    <div className="absolute bottom-full left-0 mb-2 w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
+                      <button
+                        onClick={() => {
+                          setStyle("해설지");
+                          setShowStyleDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${style === "해설지" ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"}`}
+                      >
+                        <img src="/assets/desktop/three_line_icon.svg" alt="해설지" className="w-5 h-5" />
+                        <span>해설지</span>
+                      </button>
+                      <button disabled className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400">
+                        <img src="/assets/desktop/teacher_icon.png" alt="과외 선생님" className="w-5 h-5" />
+                        <span>과외 선생님</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className={dailyUsageClasses}>
+                  하루 이용 횟수 {daily.used}/{daily.max}
+                </div>
+                <button onClick={handleSubmit} className={sendButtonClasses}>
+                  <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-2xl flex flex-col px-6 py-8 z-40 space-y-6">
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {renderMobileMessages()}
+            </div>
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className={spinnerWrapperClass}>
+                <div className={spinnerDotStyle}></div>
+                <div className={spinnerDotStyle} style={{ animationDelay: "0.1s" }}></div>
+                <div className={spinnerDotStyle} style={{ animationDelay: "0.2s" }}></div>
+              </div>
+              <p className={loadingTextClass}>답변을 작성 중이에요...</p>
+              <p className={loadingTimeClass}>소요시간 {loadingTime}초</p>
+              <button onClick={handleCancel} className={loadingCancelButtonClass}>
+                취소
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <LoginWarningPopup
+          isOpen={showLoginWarning}
+          onClose={() => setShowLoginWarning(false)}
+          onLogin={() => {
+            setShowLoginWarning(false);
+            onLoginRequest?.();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={wrapperClasses}>
-      {/* Image preview overlay */}
       {imagePreview && (
         <div className={imagePreviewClasses}>
           <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-          <button onClick={handleRemoveImage} className={removeButtonClasses}>×</button>
+          <button onClick={handleRemoveImage} className={removeButtonClasses}>
+            ×
+          </button>
         </div>
       )}
 
-      <div className={containerClasses}
+      <div
+        className={containerClasses}
         onClick={() => {
           if (isMobile) {
             mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
