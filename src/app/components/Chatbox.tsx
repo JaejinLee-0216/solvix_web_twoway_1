@@ -53,6 +53,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -94,7 +95,13 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isMobile) {
+      requestAnimationFrame(() => {
+        mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
@@ -367,6 +374,40 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     : "absolute top-[2px] right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
 
   const wrapperClasses = isMobile ? "relative" : "";
+  const bubbleStyles = isMobile
+    ? { user: "bg-[#E9F3FF] text-[#0A1625]", assistant: "bg-white text-[#111] border border-[#E1E6F0]" }
+    : { user: "bg-[#262626]", assistant: "bg-[#141414] border border-white/10" };
+  const bubbleBaseClasses = isMobile ? "px-4 py-3 rounded-[14px]" : "px-4 py-3 rounded-[10px]";
+  const messageOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[90%]";
+  const loadingOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[80%]";
+  const messageTextClass = isMobile ? "text-[13px] leading-[1.6] whitespace-pre-wrap" : "text-sm whitespace-pre-wrap";
+  const copyButtonClass = isMobile
+    ? "inline-flex items-center gap-1 text-xs text-[#0075DC] hover:text-[#005bb5] transition-colors"
+    : "inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors";
+  const copyToastClass = isMobile
+    ? "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-[#0075DC] text-white shadow animate-fade-in-out"
+    : "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-blue-600/95 text-white shadow animate-fade-in-out";
+  const conversationContainerClasses = isMobile
+    ? "mt-5 max-h-[320px] overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-[#BFD4F0] scrollbar-track-transparent"
+    : "absolute left-[171px] top-[130px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800";
+  const conversationInnerClasses = isMobile ? "flex flex-col gap-4" : "flex flex-col gap-4 p-4";
+  const loadingOverlayClasses = isMobile
+    ? "fixed inset-0 bg-black/75 backdrop-blur-sm flex flex-col z-50 px-5 py-8"
+    : "absolute left-[171px] top-[130px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg";
+  const loadingHistoryClasses = isMobile
+    ? "flex-1 overflow-y-auto flex flex-col gap-4 w-full"
+    : "flex flex-col gap-4 p-4 h-full overflow-y-auto";
+  const loadingContainerClasses = isMobile
+    ? "flex flex-col items-center justify-center mt-6"
+    : "flex flex-col items-center justify-center mt-4";
+  const loadingTextClass = isMobile ? "text-white text-base mb-2" : "text-white text-lg mb-2";
+  const loadingTimeClass = isMobile ? "text-gray-200 text-sm mb-4" : "text-gray-300 text-sm mb-4";
+  const loadingCancelButtonClass = isMobile
+    ? "bg-[#007ABE] hover:bg-[#006599] text-white px-5 py-2 rounded-lg transition-colors"
+    : "bg-[#007ABE] hover:bg-[#006599] text-white px-6 py-2 rounded-lg transition-colors";
+  const spinnerWrapperClass = isMobile ? "flex space-x-1 mb-4" : "flex space-x-1 mb-4";
+  const spinnerDotStyle = isMobile ? "w-2 h-2 bg-white rounded-full animate-bounce" : "w-2 h-2 bg-white rounded-full animate-bounce";
+  const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
 
   return (
     <div className={wrapperClasses}>
@@ -378,7 +419,13 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         </div>
       )}
 
-      <div className={containerClasses}>
+      <div className={containerClasses}
+        onClick={() => {
+          if (isMobile) {
+            mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
+          }
+        }}
+      >
         <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
         {/* text input area */}
         <textarea

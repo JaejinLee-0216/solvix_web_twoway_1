@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import Chatbox from "../Chatbox";
 import KakaoLoginPopup from "../KakaoLoginPopup";
 import PaymentPopup from "../PaymentPopup";
+import MyPage from "../MyPage";
+import AdminPanel from "../AdminPanel";
 
 const heroBadges = [
   "수능 수학 AI 튜터",
@@ -79,6 +81,8 @@ export default function MobileLandingPlaceholder() {
     isOpen: false,
     planType: "basic"
   });
+  const [showMyPage, setShowMyPage] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   const handleChatStart = () => {};
   const handleChatReset = () => {};
@@ -137,6 +141,8 @@ export default function MobileLandingPlaceholder() {
     setShowLoginPopup(false);
   };
 
+  const planDisplay = (userInfo?.plan || "basic").toUpperCase();
+
   const closePaymentPopup = () => {
     setPaymentPopup({ isOpen: false, planType: "basic" });
   };
@@ -150,19 +156,22 @@ export default function MobileLandingPlaceholder() {
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/70 justify-end">
             {isLoggedIn && (
               <>
-                <span className="bg-white/10 px-2 py-1 rounded-full">
-                  현재 플랜: <span className="font-semibold text-[#FFD54F]">{(userInfo?.plan || "basic").toUpperCase()}</span>
-                </span>
+                <button
+                  onClick={() => setShowMyPage(true)}
+                  className="bg-white/10 px-2 py-1 rounded-full"
+                >
+                  현재 플랜: <span className="font-semibold text-[#FFD54F]">{planDisplay}</span>
+                </button>
                 <button
                   className="underline text-[#4FC3F7] px-2 py-1"
-                  onClick={() => window.location.href = "/mypage"}
+                  onClick={() => setShowMyPage(true)}
                 >
                   마이페이지
                 </button>
                 {userInfo?.isAdmin && (
                   <button
                     className="underline text-red-400 px-2 py-1"
-                    onClick={() => window.location.href = "/admin"}
+                    onClick={() => setShowAdminPanel(true)}
                   >
                     관리자
                   </button>
@@ -321,6 +330,17 @@ export default function MobileLandingPlaceholder() {
         isOpen={paymentPopup.isOpen}
         onClose={closePaymentPopup}
         planType={paymentPopup.planType}
+      />
+
+      <MyPage
+        isOpen={showMyPage}
+        onClose={() => setShowMyPage(false)}
+        userInfo={userInfo}
+      />
+
+      <AdminPanel
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
       />
 
     </div>
