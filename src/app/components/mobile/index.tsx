@@ -271,6 +271,7 @@ export default function MobileLandingPlaceholder() {
         onClose={() => setShowLoginPopup(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+
     </div>
   );
 }
