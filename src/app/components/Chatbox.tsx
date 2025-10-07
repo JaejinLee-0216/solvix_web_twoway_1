@@ -11,7 +11,6 @@ type Props = {
   isLoggedIn?: boolean;
   onLoginRequest?: () => void;
   variant?: "desktop" | "mobile";
-  className?: string;
 };
 
 type Message = {
@@ -30,7 +29,7 @@ const generateId = () => {
   return `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest, variant = "desktop", className }: Props) {
+export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest, variant = "desktop" }: Props) {
   const [text, setText] = useState("");
   const [model, setModel] = useState("SOLVIX 1.0");
   const [style, setStyle] = useState("해설지");
@@ -344,31 +343,33 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const isMobile = variant === "mobile";
 
   const containerClasses = isMobile
-    ? "relative rounded-[20px] border border-white/15 bg-white/5 p-4"
+    ? "rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] p-4"
     : "absolute left-[171px] top-[490px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]";
 
   const textareaClasses = isMobile
-    ? "w-full resize-none rounded-[14px] border border-white/15 bg-black/40 p-3 text-sm text-white placeholder:text-white/40 outline-none"
+    ? "w-full resize-none rounded-[12px] bg-transparent p-3 text-sm text-[#111] placeholder:text-[#666F8D] outline-none"
     : "absolute left-[31px] top-[23px] right-[29px] bottom-[56px] resize-none outline-none text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D]";
 
   const bottomBarClasses = isMobile
     ? "mt-3 flex items-center justify-between"
     : "absolute left-[29px] bottom-[11px] right-[29px] flex items-center justify-between";
 
-  const dailyUsageClasses = isMobile ? "text-[11px] text-white/60" : "text-[12px] text-[#666F8D]";
+  const dailyUsageClasses = isMobile ? "text-[11px] text-[#666F8D]" : "text-[12px] text-[#666F8D]";
 
   const sendButtonClasses = isMobile ? "rounded-full bg-[#0075DC] p-3" : "cursor-pointer relative -translate-y-[2px]";
 
   const imagePreviewClasses = isMobile
-    ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-white/20 bg-black/60 shadow-lg overflow-hidden"
+    ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-lg overflow-hidden"
     : "absolute left-[171px] top-[410px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
 
   const removeButtonClasses = isMobile
-    ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center text-[14px]"
+    ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[14px]"
     : "absolute top-[2px] right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
 
+  const wrapperClasses = isMobile ? "relative" : "";
+
   return (
-    <div className={className}>
+    <div className={wrapperClasses}>
       {/* Image preview overlay */}
       {imagePreview && (
         <div className={imagePreviewClasses}>

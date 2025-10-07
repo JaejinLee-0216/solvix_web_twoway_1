@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import Chatbox from "../Chatbox";
 import KakaoLoginPopup from "../KakaoLoginPopup";
+import PaymentPopup from "../PaymentPopup";
 
 const heroBadges = [
   "수능 수학 AI 튜터",
@@ -74,6 +75,10 @@ export default function MobileLandingPlaceholder() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [paymentPopup, setPaymentPopup] = useState<{ isOpen: boolean; planType: "basic" | "pro" | "ultra" }>({
+    isOpen: false,
+    planType: "basic"
+  });
 
   const handleChatStart = () => {};
   const handleChatReset = () => {};
@@ -132,15 +137,42 @@ export default function MobileLandingPlaceholder() {
     setShowLoginPopup(false);
   };
 
+  const closePaymentPopup = () => {
+    setPaymentPopup({ isOpen: false, planType: "basic" });
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#03050A] text-white">
       {/* Navigation */}
       <header className="px-5 pt-10 pb-6">
         <div className="flex items-center justify-between">
           <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={128} height={34} priority />
-          <button onClick={handleLoginClick} className="text-sm font-semibold text-[#0075DC] underline">
-            {isLoggedIn ? '로그아웃' : '로그인'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/70 justify-end">
+            {isLoggedIn && (
+              <>
+                <span className="bg-white/10 px-2 py-1 rounded-full">
+                  현재 플랜: <span className="font-semibold text-[#FFD54F]">{(userInfo?.plan || "basic").toUpperCase()}</span>
+                </span>
+                <button
+                  className="underline text-[#4FC3F7] px-2 py-1"
+                  onClick={() => window.location.href = "/mypage"}
+                >
+                  마이페이지
+                </button>
+                {userInfo?.isAdmin && (
+                  <button
+                    className="underline text-red-400 px-2 py-1"
+                    onClick={() => window.location.href = "/admin"}
+                  >
+                    관리자
+                  </button>
+                )}
+              </>
+            )}
+            <button onClick={handleLoginClick} className="text-sm font-semibold text-[#0075DC] underline px-2 py-1">
+              {isLoggedIn ? '로그아웃' : '로그인'}
+            </button>
+          </div>
         </div>
 
         <div className="mt-7 space-y-3">
@@ -179,7 +211,7 @@ export default function MobileLandingPlaceholder() {
       </section>
 
       {/* Chat preview */}
-      <section className="px-5 mt-6 relative">
+      <section className="px-5 mt-6">
         <Chatbox
           variant="mobile"
           isLoggedIn={isLoggedIn}
@@ -191,7 +223,7 @@ export default function MobileLandingPlaceholder() {
 
       {/* Score card */}
       <section className="px-5 mt-10">
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#111A2A] to-[#05070F] p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">SOLVIX 1.0 성능 비교</h2>
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">실전 모의고사 기준</span>
@@ -207,7 +239,7 @@ export default function MobileLandingPlaceholder() {
       <section className="px-5 mt-12 space-y-4">
         <h2 className="text-lg font-semibold">실제 학생들의 후기</h2>
         {testimonials.map((item) => (
-          <div key={item.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div key={item.name} className="rounded-2xl border border-white/10 p-4">
             <div className="text-[#FFC24C] text-[12px]">★★★★★</div>
             <p className="mt-2 text-[13px] leading-[1.6] text-white/80">{item.quote}</p>
             <p className="mt-3 text-[11px] text-white/50">{item.name}</p>
@@ -222,7 +254,7 @@ export default function MobileLandingPlaceholder() {
           <span className="text-xs text-white/40">나에게 맞는 플랜을 선택하세요.</span>
         </div>
         {plans.map((plan) => (
-          <div key={plan.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div key={plan.name} className="rounded-2xl border border-white/10 p-4">
             <div className="flex gap-3">
               <Image src={plan.svg} alt={`${plan.name} plan`} width={92} height={120} className="w-[92px]" />
               <div className="flex-1 space-y-1">
@@ -233,7 +265,18 @@ export default function MobileLandingPlaceholder() {
                   <span className="text-xl font-bold text-white">{plan.price}</span>
                   {plan.original ? <span className="text-[12px] text-white/35 line-through">{plan.original}</span> : null}
                 </div>
-                <button className="mt-3 w-full rounded-xl bg-[#0075DC] py-2 text-sm font-semibold">{plan.button}</button>
+                <button
+                  className="mt-3 w-full rounded-xl border border-[#3BA7FF] text-[#3BA7FF] py-2 text-sm font-semibold"
+                  onClick={() => {
+                    if (plan.name === "Basic") {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    } else {
+                      setPaymentPopup({ isOpen: true, planType: plan.name.toLowerCase() as "basic" | "pro" | "ultra" });
+                    }
+                  }}
+                >
+                  {plan.button}
+                </button>
               </div>
             </div>
           </div>
@@ -242,14 +285,14 @@ export default function MobileLandingPlaceholder() {
 
       {/* Expert logos */}
       <section className="px-5 mt-12">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="rounded-2xl border border-white/10 p-4">
           <h2 className="text-lg font-semibold">최고의 전문가들이 함께합니다</h2>
           <p className="mt-2 text-sm text-white/70">
             서울대학교 컴퓨터공학부 AI 팀과 수능 분석 전문가가 설계하고 검증했습니다.
           </p>
           <div className="mt-5 grid grid-cols-3 gap-3">
             {expertLogos.map((logo) => (
-              <div key={logo.alt} className="flex items-center justify-center rounded-xl bg-black/30 py-3">
+              <div key={logo.alt} className="flex items-center justify-center rounded-xl border border-white/10 py-3">
                 <Image src={logo.src} alt={logo.alt} width={70} height={28} />
               </div>
             ))}
@@ -259,7 +302,7 @@ export default function MobileLandingPlaceholder() {
 
       {/* Footer */}
       <footer className="px-5 mt-12 pb-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-[1.6] text-white/70">
+        <div className="rounded-2xl border border-white/10 p-4 text-sm leading-[1.6] text-white/70">
           SOLVIX는 분석형 수학 학습을 돕는 AI 서비스입니다. 하루 10분의 훈련으로도 극적인 성적 향상을 경험하세요.
         </div>
         <div className="mt-5 flex justify-between text-[11px] text-white/40">
@@ -272,6 +315,12 @@ export default function MobileLandingPlaceholder() {
         isOpen={showLoginPopup}
         onClose={() => setShowLoginPopup(false)}
         onLoginSuccess={handleLoginSuccess}
+      />
+
+      <PaymentPopup
+        isOpen={paymentPopup.isOpen}
+        onClose={closePaymentPopup}
+        planType={paymentPopup.planType}
       />
 
     </div>
