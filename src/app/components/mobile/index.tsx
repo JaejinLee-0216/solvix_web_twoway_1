@@ -83,6 +83,9 @@ export default function MobileLandingPlaceholder() {
   });
   const [showMyPage, setShowMyPage] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedMode, setSelectedMode] = useState(featureModes[0].label);
 
   const handleChatStart = () => {};
   const handleChatReset = () => {};
@@ -153,33 +156,19 @@ export default function MobileLandingPlaceholder() {
       <header className="px-5 pt-10 pb-6">
         <div className="flex items-center justify-between">
           <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={128} height={34} priority />
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/70 justify-end">
-            {isLoggedIn && (
-              <>
-                <button
-                  onClick={() => setShowMyPage(true)}
-                  className="bg-white/10 px-2 py-1 rounded-full"
-                >
-                  현재 플랜: <span className="font-semibold text-[#FFD54F]">{planDisplay}</span>
-                </button>
-                <button
-                  className="underline text-[#4FC3F7] px-2 py-1"
-                  onClick={() => setShowMyPage(true)}
-                >
-                  마이페이지
-                </button>
-                {userInfo?.isAdmin && (
-                  <button
-                    className="underline text-red-400 px-2 py-1"
-                    onClick={() => setShowAdminPanel(true)}
-                  >
-                    관리자
-                  </button>
-                )}
-              </>
-            )}
-            <button onClick={handleLoginClick} className="text-sm font-semibold text-[#0075DC] underline px-2 py-1">
-              {isLoggedIn ? '로그아웃' : '로그인'}
+          <div className="flex items-center gap-3 text-[11px] text-white/70">
+            {isLoggedIn ? (
+              <span className="bg-white/10 px-2 py-1 rounded-full">
+                현재 플랜: <span className="font-semibold text-[#FFD54F]">{planDisplay}</span>
+              </span>
+            ) : null}
+            <button onClick={() => setMenuOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20">
+              <span className="sr-only">열기</span>
+              <div className="space-y-1.5">
+                <span className="block h-1 w-6 rounded bg-white"></span>
+                <span className="block h-1 w-6 rounded bg-white"></span>
+                <span className="block h-1 w-6 rounded bg-white"></span>
+              </div>
             </button>
           </div>
         </div>
@@ -203,114 +192,77 @@ export default function MobileLandingPlaceholder() {
         </div>
       </header>
 
-      {/* Mode selection */}
+      {/* Guided steps */}
       <section className="px-5">
-        <div className="flex gap-2">
-          {featureModes.map((mode) => (
-            <button
-              key={mode.label}
-              className={`flex-1 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${mode.active ? "border border-[#3BA7FF] bg-[#0A1625] text-[#CFEAFF]" : "border border-white/10 text-white/40"}`}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Chat preview */}
-      <section className="px-5 mt-6">
-        <Chatbox
-          variant="mobile"
-          isLoggedIn={isLoggedIn}
-          onStartConversation={handleChatStart}
-          onReset={handleChatReset}
-          onLoginRequest={handleLoginRequest}
-        />
-      </section>
-
-      {/* Score card */}
-      <section className="px-5 mt-10">
-        <div className="rounded-2xl border border-white/10 p-5 shadow-lg">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">SOLVIX 1.0 성능 비교</h2>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">실전 모의고사 기준</span>
-          </div>
-          <Image src="/assets/desktop/score_graph.svg" alt="성능 비교" width={340} height={160} className="mt-4 w-full" />
-          <p className="mt-4 text-[11px] leading-[1.5] text-white/50">
-            * 2026학년도 6모 대비 M사 K모의고사 기준 (미적분). SOLVIX는 동일 조건에서 공정하게 평가했습니다.
-          </p>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="px-5 mt-12 space-y-4">
-        <h2 className="text-lg font-semibold">실제 학생들의 후기</h2>
-        {testimonials.map((item) => (
-          <div key={item.name} className="rounded-2xl border border-white/10 p-4">
-            <div className="text-[#FFC24C] text-[12px]">★★★★★</div>
-            <p className="mt-2 text-[13px] leading-[1.6] text-white/80">{item.quote}</p>
-            <p className="mt-3 text-[11px] text-white/50">{item.name}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* Pricing plans */}
-      <section className="px-5 mt-12 space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">요금제</h2>
-          <span className="text-xs text-white/40">나에게 맞는 플랜을 선택하세요.</span>
-        </div>
-        {plans.map((plan) => (
-          <div key={plan.name} className="rounded-2xl border border-white/10 p-4">
-            <div>
-              <Image
-                src={plan.svg}
-                alt={`${plan.name} plan`}
-                width={292}
-                height={431}
-                className="w-full h-auto"
-              />
-              <div className="mt-4 space-y-2">
-                {plan.badge ? <span className="text-xs text-[#FFCE4E]">{plan.badge}</span> : null}
-                <h3 className="text-lg font-semibold">{plan.name}</h3>
-                <p className="text-xs text-white/60 leading-[1.6]">{plan.highlight}</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-bold text-white">{plan.price}</span>
-                  {plan.original ? <span className="text-[12px] text-white/35 line-through">{plan.original}</span> : null}
-                </div>
+        {currentStep === -1 ? (
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-6 space-y-4">
+            <p className="text-sm text-white/80">오늘 집중하고 싶은 목표를 선택하면 SOLVIX가 자동으로 도와드려요.</p>
+            <div className="space-y-3">
+              {featureModes.map((mode) => (
                 <button
-                  className="mt-3 w-full rounded-xl border border-[#3BA7FF] text-[#3BA7FF] py-2 text-sm font-semibold"
-                  onClick={() => {
-                    if (plan.name === "Basic") {
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    } else {
-                      setPaymentPopup({ isOpen: true, planType: plan.name.toLowerCase() as "basic" | "pro" | "ultra" });
-                    }
-                  }}
+                  key={mode.label}
+                  onClick={() => setSelectedMode(mode.label)}
+                  className={`w-full rounded-xl px-4 py-3 text-left text-sm font-medium flex items-center justify-between border transition-colors ${
+                    selectedMode === mode.label ? "border-[#3BA7FF] bg-[#0A1625] text-[#CFEAFF]" : "border-white/10 text-white/60"
+                  }`}
                 >
-                  {plan.button}
+                  {mode.label}
+                  {mode.label === selectedMode ? <span className="text-xs text-[#3BA7FF]">선택됨</span> : null}
                 </button>
-              </div>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setCurrentStep(1)}
+                className="rounded-xl bg-[#3BA7FF] px-5 py-2 text-sm font-semibold text-white"
+              >
+                다음 단계
+              </button>
             </div>
           </div>
-        ))}
-      </section>
+        ) : null}
 
-      {/* Expert logos */}
-      <section className="px-5 mt-12">
-        <div className="rounded-2xl border border-white/10 p-4">
-          <h2 className="text-lg font-semibold">최고의 전문가들이 함께합니다</h2>
-          <p className="mt-2 text-sm text-white/70">
-            서울대학교 컴퓨터공학부 AI 팀과 수능 분석 전문가가 설계하고 검증했습니다.
-          </p>
-          <div className="mt-5 grid grid-cols-3 gap-3">
-            {expertLogos.map((logo) => (
-              <div key={logo.alt} className="flex items-center justify-center rounded-xl border border-white/10 py-3">
-                <Image src={logo.src} alt={logo.alt} width={70} height={28} />
-              </div>
-            ))}
+        {currentStep === 1 ? (
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-6 space-y-4">
+            <p className="text-sm text-white/80">문제 이미지를 준비해 주세요. 선명한 사진일수록 더 정확한 해설을 받을 수 있어요.</p>
+            <ul className="space-y-2 text-xs text-white/60 list-disc list-inside">
+              <li>문제 전체가 잘 보이도록 촬영</li>
+              <li>필요하면 사진 위에 간단한 메모를 추가</li>
+              <li>추가 질문이 있다면 미리 떠올려보세요</li>
+            </ul>
+            <div className="flex justify-between">
+              <button onClick={() => setCurrentStep(0)} className="text-sm text-white/60">이전</button>
+              <button
+                onClick={() => setCurrentStep(2)}
+                className="rounded-xl bg-[#3BA7FF] px-5 py-2 text-sm font-semibold text-white"
+              >
+                준비 완료
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {currentStep === 0 ? (
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-6 space-y-5">
+            <div className="space-y-2">
+              <p className="text-sm text-white/80">이제 질문을 입력하고 답변을 받아보세요.</p>
+              <p className="text-xs text-white/60">모델: {selectedMode} · 플랜: {planDisplay}</p>
+            </div>
+            <Chatbox
+              variant="mobile"
+              isLoggedIn={isLoggedIn}
+              onStartConversation={handleChatStart}
+              onReset={handleChatReset}
+              onLoginRequest={handleLoginRequest}
+            />
+            <button
+              onClick={() => setCurrentStep(1)}
+              className="text-sm text-white/60"
+            >
+              이미지 다시 준비하기
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {/* Footer */}
@@ -346,6 +298,43 @@ export default function MobileLandingPlaceholder() {
         isOpen={showAdminPanel}
         onClose={() => setShowAdminPanel(false)}
       />
+
+      {/* Hamburger Menu */}
+      {menuOpen ? (
+        <div className="fixed inset-0 bg-black/80 z-50 px-6 py-8 flex flex-col">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-white/80">SOLVIX 메뉴</span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-white/10"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mt-8 space-y-4 text-base font-semibold text-white">
+            <button onClick={() => { setMenuOpen(false); setCurrentStep(-1); }} className="w-full text-left">목표 선택하기</button>
+            <button onClick={() => { setMenuOpen(false); setCurrentStep(1); }} className="w-full text-left">이미지 준비 안내</button>
+            <button onClick={() => { setMenuOpen(false); setCurrentStep(0); }} className="w-full text-left">채팅 열기</button>
+            <button onClick={() => { setMenuOpen(false); setShowMyPage(true); }} className="w-full text-left">마이페이지</button>
+            {userInfo?.isAdmin ? (
+              <button onClick={() => { setMenuOpen(false); setShowAdminPanel(true); }} className="w-full text-left text-red-400">관리자</button>
+            ) : null}
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                handleLoginClick();
+              }}
+              className="w-full text-left text-[#3BA7FF]"
+            >
+              {isLoggedIn ? "로그아웃" : "로그인"}
+            </button>
+          </div>
+          <div className="mt-auto space-y-3 text-white/50 text-xs">
+            <p>요금제, 후기, 성능 비교 등은 데스크톱에서 확인해 주세요.</p>
+            <p>© {year} SOLVIX</p>
+          </div>
+        </div>
+      ) : null}
 
     </div>
   );

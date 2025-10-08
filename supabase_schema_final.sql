@@ -44,6 +44,25 @@ CREATE TABLE IF NOT EXISTS public.user_usage (
   UNIQUE(user_id, usage_date)
 );
 
+CREATE TABLE IF NOT EXISTS public.user_question_balance (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  bonus_balance INT DEFAULT 0,
+  unlimited BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- View to expose usage with bonus total for current plan
+CREATE OR REPLACE VIEW public.v_user_usage_today AS
+SELECT
+  uu.user_id,
+  uu.usage_date,
+  uu.daily_count,
+  uu.max_daily_count,
+  uu.bonus_questions,
+  uu.total_questions_used
+FROM public.user_usage uu;
+
 -- User conversations (Q&A history)
 CREATE TABLE IF NOT EXISTS public.user_conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -103,6 +122,9 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trg_usage_updated BEFORE UPDATE ON public.user_usage
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER trg_question_balance_updated BEFORE UPDATE ON public.user_question_balance
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER trg_settings_updated BEFORE UPDATE ON public.system_settings
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -126,10 +148,27 @@ CREATE POLICY users_admin_select ON public.users
   FOR SELECT USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
 
 -- Usage policies
-CREATE POLICY usage_self_all ON public.user_usage
-  FOR ALL USING (auth.uid()::text = user_id::text);
+CREATE POLICY usage_self_select ON public.user_usage
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+CREATE POLICY usage_self_insert ON public.user_usage
+  FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+CREATE POLICY usage_self_update ON public.user_usage
+  FOR UPDATE USING (auth.uid()::text = user_id::text);
 CREATE POLICY usage_admin_select ON public.user_usage
   FOR SELECT USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
+CREATE POLICY usage_admin_update ON public.user_usage
+  FOR UPDATE USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
+
+-- Question balance policies
+ALTER TABLE public.user_question_balance ENABLE ROW LEVEL SECURITY;
+CREATE POLICY question_balance_self_select ON public.user_question_balance
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+CREATE POLICY question_balance_self_update ON public.user_question_balance
+  FOR UPDATE USING (auth.uid()::text = user_id::text);
+CREATE POLICY question_balance_admin_all ON public.user_question_balance
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
+
+DROP VIEW IF EXISTS public.v_user_usage_today;
 
 -- Subscription policies
 CREATE POLICY subs_self_all ON public.user_subscriptions
@@ -154,6 +193,14 @@ CREATE POLICY settings_admin_only ON public.system_settings
   FOR ALL USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
 
 -- Helper functions
+DROP FUNCTION IF EXISTS create_user_from_kakao(VARCHAR, VARCHAR, VARCHAR, TEXT, BOOLEAN);
+DROP FUNCTION IF EXISTS get_user_current_plan(UUID);
+DROP FUNCTION IF EXISTS get_user_plan_daily_limit(UUID);
+DROP FUNCTION IF EXISTS get_user_usage_today(UUID);
+DROP FUNCTION IF EXISTS increment_user_usage(UUID, INT);
+DROP FUNCTION IF EXISTS increment_user_usage(UUID);
+DROP FUNCTION IF EXISTS give_bonus_questions(UUID, UUID, INT);
+
 CREATE OR REPLACE FUNCTION create_user_from_kakao(
   p_kakao_id VARCHAR(50),
   p_nickname VARCHAR(100),
@@ -180,6 +227,11 @@ BEGIN
     VALUES (v_user_id, 'basic', 'active');
   END IF;
 
+  -- 질문 잔고 레코드 초기화
+  INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
+  VALUES (v_user_id, 5, false)
+  ON CONFLICT (user_id) DO NOTHING;
+
   RETURN v_user_id;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -195,35 +247,184 @@ BEGIN
   RETURN COALESCE(v_plan, 'basic');
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION get_user_usage_today(p_user_id UUID)
-RETURNS TABLE(daily_count INT, max_daily_count INT, bonus_questions INT) AS $$
+CREATE OR REPLACE FUNCTION get_user_plan_daily_limit(p_user_id UUID)
+RETURNS TABLE(free_daily INT, unlimited BOOLEAN) AS $$
+DECLARE
+  v_plan VARCHAR(20);
 BEGIN
+  v_plan := get_user_current_plan(p_user_id);
+
   RETURN QUERY
-  SELECT COALESCE(uu.daily_count,0),
-         5, -- 기본 상한, 플랜별 차등을 두려면 별도 로직 추가
-         COALESCE(uu.bonus_questions,0)
-  FROM public.users u
-  LEFT JOIN public.user_usage uu
-    ON uu.user_id = u.id
-   AND uu.usage_date = CURRENT_DATE
-  WHERE u.id = p_user_id;
+  SELECT CASE v_plan
+           WHEN 'pro' THEN 10
+           WHEN 'ultra' THEN 0
+           ELSE 1
+         END AS free_daily,
+         (v_plan = 'ultra') AS unlimited;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_user_usage_today(p_user_id UUID)
+RETURNS TABLE(used_today INT, free_daily INT, bonus_balance INT, unlimited BOOLEAN) AS $$
+DECLARE
+  v_daily_limit RECORD;
+  v_balance INT;
+  v_unlimited BOOLEAN;
+BEGIN
+  SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_user_id);
+  SELECT bonus_balance, unlimited INTO v_balance, v_unlimited
+  FROM public.user_question_balance
+  WHERE user_id = p_user_id;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
+    VALUES (p_user_id, 0, v_daily_limit.unlimited)
+    ON CONFLICT (user_id) DO NOTHING;
+    v_balance := 0;
+    v_unlimited := v_daily_limit.unlimited;
+  ELSE
+    v_unlimited := v_unlimited OR v_daily_limit.unlimited;
+    IF FOUND THEN
+      UPDATE public.user_question_balance
+      SET unlimited = v_unlimited,
+          updated_at = now()
+      WHERE user_id = p_user_id;
+    END IF;
+  END IF;
+
+  RETURN QUERY
+  SELECT COALESCE(uu.daily_count, 0) AS used_today,
+         v_daily_limit.free_daily,
+         v_balance,
+         v_unlimited
+  FROM public.user_usage uu
+  WHERE uu.user_id = p_user_id AND uu.usage_date = CURRENT_DATE;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_user_usage(p_user_id UUID, p_increment INT DEFAULT 1)
+RETURNS TABLE(
+  used_today INT,
+  free_daily INT,
+  bonus_balance INT,
+  unlimited BOOLEAN,
+  limit_reached BOOLEAN,
+  increment_applied INT
+) AS $$
+DECLARE
+  v_daily_limit RECORD;
+  v_usage public.user_usage%ROWTYPE;
+  v_plan_remaining INT;
+  v_bonus_balance INT;
+  v_unlimited BOOLEAN;
+  v_plan_used INT := 0;
+  v_bonus_used INT := 0;
+  v_total_increment INT := p_increment;
+BEGIN
+  SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_user_id);
+
+  INSERT INTO public.user_usage (user_id, usage_date, daily_count, max_daily_count, bonus_questions, total_questions_used)
+  VALUES (p_user_id, CURRENT_DATE, 0, 0, 0, 0)
+  ON CONFLICT (user_id, usage_date) DO UPDATE
+    SET updated_at = now()
+  RETURNING * INTO v_usage;
+
+  SELECT bonus_balance, unlimited INTO v_bonus_balance, v_unlimited
+  FROM public.user_question_balance
+  WHERE user_id = p_user_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
+    VALUES (p_user_id, 0, v_daily_limit.unlimited)
+    RETURNING bonus_balance, unlimited INTO v_bonus_balance, v_unlimited;
+  END IF;
+
+  v_unlimited := v_unlimited OR v_daily_limit.unlimited;
+
+  IF v_unlimited THEN
+    UPDATE public.user_usage
+    SET daily_count = v_usage.daily_count + p_increment,
+        total_questions_used = v_usage.total_questions_used + p_increment,
+        updated_at = now()
+    WHERE id = v_usage.id;
+
+    UPDATE public.user_question_balance
+    SET unlimited = TRUE,
+        updated_at = now()
+    WHERE user_id = p_user_id;
+
+    RETURN QUERY SELECT
+      v_usage.daily_count + p_increment,
+      v_daily_limit.free_daily,
+      v_bonus_balance,
+      TRUE,
+      FALSE,
+      p_increment;
+    RETURN;
+  END IF;
+
+  v_plan_remaining := GREATEST(v_daily_limit.free_daily - v_usage.daily_count, 0);
+  v_plan_used := LEAST(v_plan_remaining, v_total_increment);
+  v_total_increment := v_total_increment - v_plan_used;
+
+  IF v_total_increment > 0 THEN
+    v_bonus_used := LEAST(v_total_increment, v_bonus_balance);
+    v_total_increment := v_total_increment - v_bonus_used;
+  END IF;
+
+  IF v_total_increment > 0 THEN
+    RETURN QUERY SELECT
+      v_usage.daily_count,
+      v_daily_limit.free_daily,
+      v_bonus_balance,
+      FALSE,
+      TRUE,
+      0;
+    RETURN;
+  END IF;
+
+  UPDATE public.user_usage
+  SET daily_count = v_usage.daily_count + v_plan_used,
+      total_questions_used = v_usage.total_questions_used + v_plan_used + v_bonus_used,
+      updated_at = now()
+  WHERE id = v_usage.id;
+
+  UPDATE public.user_question_balance
+  SET bonus_balance = v_bonus_balance - v_bonus_used,
+      unlimited = v_unlimited,
+      updated_at = now()
+  WHERE user_id = p_user_id;
+
+  RETURN QUERY SELECT
+    (v_usage.daily_count + v_plan_used),
+    v_daily_limit.free_daily,
+    (v_bonus_balance - v_bonus_used),
+    FALSE,
+    FALSE,
+    (v_plan_used + v_bonus_used);
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION give_bonus_questions(p_admin_user_id UUID, p_target_user_id UUID, p_bonus_count INT)
 RETURNS BOOLEAN AS $$
-DECLARE v_is_admin BOOLEAN;
+DECLARE
+  v_is_admin BOOLEAN;
+  v_daily_limit RECORD;
+  v_balance INT;
 BEGIN
   SELECT is_admin INTO v_is_admin FROM public.users WHERE id = p_admin_user_id;
   IF NOT v_is_admin THEN RETURN FALSE; END IF;
 
-  INSERT INTO public.user_usage (user_id, usage_date, daily_count, max_daily_count, bonus_questions, total_questions_used)
-  VALUES (p_target_user_id, CURRENT_DATE, 0, 5, p_bonus_count, 0)
-  ON CONFLICT (user_id, usage_date) DO UPDATE
-    SET bonus_questions = user_usage.bonus_questions + EXCLUDED.bonus_questions,
-        updated_at = now();
+  SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_target_user_id);
+
+  INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
+  VALUES (p_target_user_id, p_bonus_count, v_daily_limit.unlimited)
+  ON CONFLICT (user_id) DO UPDATE
+    SET bonus_balance = user_question_balance.bonus_balance + EXCLUDED.bonus_balance,
+        unlimited = user_question_balance.unlimited OR EXCLUDED.unlimited,
+        updated_at = now()
+  RETURNING bonus_balance INTO v_balance;
 
   INSERT INTO public.admin_actions (admin_user_id, target_user_id, action_type, action_details)
-  VALUES (p_admin_user_id, p_target_user_id, 'give_bonus_questions', jsonb_build_object('bonus_count', p_bonus_count));
+  VALUES (p_admin_user_id, p_target_user_id, 'give_bonus_questions', jsonb_build_object('bonus_count', p_bonus_count, 'total_balance', v_balance));
 
   RETURN TRUE;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;

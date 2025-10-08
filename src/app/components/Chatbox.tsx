@@ -33,7 +33,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [text, setText] = useState("");
   const [model, setModel] = useState("SOLVIX 1.0");
   const [style, setStyle] = useState("해설지");
-  const [daily, setDaily] = useState({ used: 0, max: 5 });
+  const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
+  const [isUnlimited, setIsUnlimited] = useState(false);
+  const [dailyLoading, setDailyLoading] = useState(false);
+  const [dailyError, setDailyError] = useState<string | null>(null);
+  const [usageReady, setUsageReady] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -54,6 +58,51 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const applyUsage = (usage: any) => {
+    const used = usage?.usedToday ?? usage?.daily_count ?? 0;
+    const free = usage?.freeDaily ?? usage?.free_daily ?? 0;
+    const bonus = usage?.bonusBalance ?? usage?.bonus_balance ?? 0;
+    const unlimited = Boolean(usage?.unlimited);
+    setDaily({ used, free, bonus, unlimited });
+    setIsUnlimited(unlimited);
+  };
+
+  const fetchUsage = async () => {
+    if (!isLoggedIn) {
+      setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
+      setIsUnlimited(false);
+      setDailyError(null);
+      setUsageReady(true);
+      return;
+    }
+
+    try {
+      setDailyLoading(true);
+      setDailyError(null);
+
+      const response = await fetch("/api/usage", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        setDailyError(errorPayload?.error ?? "일일 사용량을 불러오지 못했습니다.");
+        setUsageReady(true);
+        return;
+      }
+
+      const payload = await response.json();
+      applyUsage(payload?.usage ?? {});
+      setUsageReady(true);
+    } catch (error) {
+      console.error("Failed to fetch usage", error);
+      setDailyError("일일 사용량을 불러오지 못했습니다.");
+      setUsageReady(true);
+    } finally {
+      setDailyLoading(false);
+    }
+  };
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -86,12 +135,13 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   };
 
   useEffect(() => {
+    fetchUsage();
     return () => {
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
       }
     };
-  }, []);
+  }, [isLoggedIn]);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -222,7 +272,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
           { role: 'assistant', text: normalizedAnswer, showVisualization: false, visualization: null, id: generateId() },
         ]);
       }
-      setDaily((d) => ({ ...d, used: Math.min(d.used + 1, d.max) }));
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Request was cancelled');
@@ -584,9 +633,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
               </div>
 
               <div className="flex items-center gap-4">
-                <div className={dailyUsageClasses}>
-                  하루 이용 횟수 {daily.used}/{daily.max}
-                </div>
+            <div className={dailyUsageClasses}>
+              하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
+            </div>
                 <button onClick={handleSubmit} className={sendButtonClasses}>
                   <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
                 </button>
@@ -637,7 +686,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
           </button>
         </div>
       )}
-
+      
       <div
         className={containerClasses}
         onClick={() => {
@@ -730,21 +779,21 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
                   >
                     <img src="/assets/desktop/three_line_icon.svg" alt="해설지" className="w-5 h-5" />
                     <span>해설지</span>
-                  </button>
+            </button>
                   <button
                     disabled
                     className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400"
                   >
                     <img src="/assets/desktop/teacher_icon.png" alt="과외 선생님" className="w-5 h-5" />
                     <span>과외 선생님</span>
-                  </button>
+            </button>
                 </div>
               )}
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className={dailyUsageClasses}>
-              하루 이용 횟수 {daily.used}/{daily.max}
+              하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
             </div>
             <button onClick={handleSubmit} className={sendButtonClasses}>
               <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={isMobile ? 30 : 42} height={isMobile ? 30 : 42} />
