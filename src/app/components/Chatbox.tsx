@@ -142,6 +142,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   };
 
   const handleSubmit = async () => {
+    if (variant === "desktop") {
+      window.open("/chat", "_blank");
+      return;
+    }
+
     if (!text && !image) return;
     
     // Check if user is logged in
