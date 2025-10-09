@@ -8,11 +8,6 @@ import PaymentPopup from "../PaymentPopup";
 import MyPage from "../MyPage";
 import AdminPanel from "../AdminPanel";
 
-const heroBadges = [
-  "수능 수학 AI 튜터",
-  "서울대 AI팀 검증"
-];
-
 const featureModes = [
   { label: "문제 풀이", active: true },
   { label: "풀이 첨삭", active: false },
@@ -174,13 +169,6 @@ export default function MobileLandingPlaceholder() {
         </div>
 
         <div className="mt-7 space-y-3">
-          <div className="flex gap-2 flex-wrap">
-            {heroBadges.map((badge) => (
-              <span key={badge} className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/70">
-                {badge}
-              </span>
-            ))}
-          </div>
           <h1 className="text-[28px] font-semibold leading-[1.3]">
             킬러 문항,
             <br /> 더 이상 두렵지 않게.

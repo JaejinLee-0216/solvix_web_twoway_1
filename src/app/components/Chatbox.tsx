@@ -1,5 +1,12 @@
 "use client";
-import { useRef, useState, useEffect } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import MathRenderer from "./MathRenderer";
 import LoginWarningPopup from "./LoginWarningPopup";
 import D3Visualization, { VisualizationData as D3VisualizationData } from "./D3Visualization";
@@ -11,6 +18,12 @@ type Props = {
   isLoggedIn?: boolean;
   onLoginRequest?: () => void;
   variant?: "desktop" | "mobile";
+  onImageAttached?: (attached: boolean) => void;
+};
+
+export type ChatboxHandle = {
+  attachImage: (file: File) => void;
+  focusInput: () => void;
 };
 
 type Message = {
@@ -29,7 +42,19 @@ const generateId = () => {
   return `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export default function Chatbox({ onSubmit, onStartConversation, onReset, isLoggedIn = false, onLoginRequest, variant = "desktop" }: Props) {
+const Chatbox = forwardRef<ChatboxHandle, Props>(
+function Chatbox(
+  {
+    onSubmit,
+    onStartConversation,
+    onReset,
+    isLoggedIn = false,
+    onLoginRequest,
+    variant = "desktop",
+    onImageAttached,
+  }: Props,
+  ref
+) {
   const [text, setText] = useState("");
   const [model, setModel] = useState("SOLVIX 1.0");
   const [style, setStyle] = useState("해설지");
@@ -39,6 +64,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationMode, setConversationMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,15 +82,15 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const applyUsage = (usage: any) => {
+  const applyUsage = useCallback((usage: any) => {
     const used = usage?.usedToday ?? usage?.daily_count ?? 0;
     const free = usage?.freeDaily ?? usage?.free_daily ?? 0;
     const bonus = usage?.bonusBalance ?? usage?.bonus_balance ?? 0;
     const unlimited = Boolean(usage?.unlimited);
     setDaily({ used, free, bonus, unlimited });
-  };
+  }, []);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     if (!isLoggedIn) {
       setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
       setUsageReady(true);
@@ -94,7 +120,41 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     } finally {
       setDailyLoading(false);
     }
-  };
+  }, [applyUsage, isLoggedIn]);
+
+  const applyImageFile = useCallback((file: File) => {
+    if (!file) return;
+    setImage(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    onImageAttached?.(true);
+  }, [onImageAttached]);
+
+  useImperativeHandle(ref, () => ({
+    attachImage: (file: File) => {
+      if (!file) return;
+      applyImageFile(file);
+      if (fileInput.current) {
+        try {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.current.files = dataTransfer.files;
+        } catch (error) {
+          console.warn("Failed to sync file input", error);
+        }
+      }
+    },
+    focusInput: () => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const value = textareaRef.current.value;
+        textareaRef.current.setSelectionRange(value.length, value.length);
+      }
+    },
+  }), [applyImageFile]);
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -170,10 +230,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
-      setImage(f);
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target?.result as string);
-      reader.readAsDataURL(f);
+      applyImageFile(f);
     }
   };
 
@@ -181,6 +238,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     setImage(null);
     setImagePreview(null);
     if (fileInput.current) fileInput.current.value = "";
+    onImageAttached?.(false);
   };
 
   const handleSubmit = async () => {
@@ -250,6 +308,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     setImage(null);
     setImagePreview(null);
     if (fileInput.current) fileInput.current.value = "";
+    onImageAttached?.(false);
     
     // Start loading timer
     const interval = setInterval(() => {
@@ -433,10 +492,14 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   };
 
   const isMobile = variant === "mobile";
+  const desktopContainerStyle = !isMobile ? { top: 620 } : undefined;
+  const desktopPreviewStyle = !isMobile ? { top: 540 } : undefined;
+  const desktopOverlayStyle = !isMobile ? { top: 260 } : undefined;
+  const desktopConversationStyle = !isMobile ? { top: 260 } : undefined;
 
   const containerClasses = isMobile
     ? "rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] p-4"
-    : "absolute left-[171px] top-[490px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]";
+    : "absolute left-[171px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]";
 
   const textareaClasses = isMobile
     ? "w-full resize-none rounded-[12px] bg-transparent p-3 text-sm text-[#111] placeholder:text-[#666F8D] outline-none"
@@ -452,7 +515,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
 
   const imagePreviewClasses = isMobile
     ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-lg overflow-hidden"
-    : "absolute left-[171px] top-[410px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
+    : "absolute left-[171px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
 
   const removeButtonClasses = isMobile
     ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[14px]"
@@ -474,11 +537,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     : "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-blue-600/95 text-white shadow animate-fade-in-out";
   const conversationContainerClasses = isMobile
     ? "mt-5 max-h-[360px] overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-[#BFD4F0] scrollbar-track-transparent"
-    : "absolute left-[171px] top-[130px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800";
+    : "absolute left-[171px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800";
   const conversationInnerClasses = isMobile ? "flex flex-col gap-4 px-2" : "flex flex-col gap-4 p-4";
   const loadingOverlayClasses = isMobile
     ? "absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col z-40 px-6 py-8"
-    : "absolute left-[171px] top-[130px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg";
+    : "absolute left-[171px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg";
   const loadingHistoryClasses = isMobile
     ? "flex-1 overflow-y-auto flex flex-col gap-4 w-full"
     : "flex flex-col gap-4 p-4 h-full overflow-y-auto";
@@ -590,7 +653,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="문제 사진만 올려도 OK! 추가 질문도 입력해보세요"
+              placeholder="질문을 입력하거나 추가 안내를 적어 주세요"
               className={textareaClasses}
               rows={4}
             />
@@ -708,7 +771,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   return (
     <div className={wrapperClasses}>
       {imagePreview && (
-        <div className={imagePreviewClasses}>
+        <div className={imagePreviewClasses} style={desktopPreviewStyle}>
           <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
           <button onClick={handleRemoveImage} className={removeButtonClasses}>
             ×
@@ -718,6 +781,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       
       <div
         className={containerClasses}
+        style={desktopContainerStyle}
         onClick={() => {
           if (isMobile) {
             mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
@@ -727,9 +791,10 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
         {/* text input area */}
         <textarea
+              ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="문제 사진만 올려도 OK! 추가 질문도 입력해보세요"
+          placeholder="질문을 입력하거나 추가 안내를 적어 주세요"
           className={textareaClasses}
           rows={isMobile ? 4 : undefined}
         />
@@ -832,7 +897,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       </div>
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute left-[171px] top-[130px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg">
+        <div className={loadingOverlayClasses} style={desktopOverlayStyle}>
           {/* Show conversation history */}
           <div className="flex flex-col gap-4 p-4 h-full overflow-y-auto">
             <div className="flex flex-col gap-4 w-full">
@@ -892,7 +957,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
 
       {/* Messages list (conversation) - Fixed height scrollable area */}
       {conversationMode && !isLoading && (
-        <div className="absolute left-[171px] top-[130px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+        <div className={conversationContainerClasses} style={desktopConversationStyle}>
           <div className="flex flex-col gap-4 p-4">
             {messages.map((m, i) => (
               <div key={m.id ?? i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -983,5 +1048,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       />
     </div>
   );
-}
+});
 
+export default Chatbox;
