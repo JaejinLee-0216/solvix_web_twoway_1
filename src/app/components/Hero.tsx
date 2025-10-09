@@ -200,36 +200,28 @@ export default function Hero() {
         </button>
       </div>
 
-      <h1 className="absolute left-1/2 -translate-x-1/2 top-[120px] w-[640px] text-center text-[56px] leading-[1.1] font-semibold tracking-[-0.04em]">
+      <h1 className="absolute left-1/2 -translate-x-1/2 top-[120px] w-[640px] text-center text-[50px] leading-[1.1] font-semibold tracking-[-0.04em]">
         수능 수학, 찍어서 풀이 받기.
       </h1>
-      <p className="absolute left-1/2 -translate-x-1/2 top-[210px] w-[520px] text-center text-[22px] text-white/80">
+      <p className="absolute left-1/2 -translate-x-1/2 top-[200px] w-[520px] text-center text-[18px] text-white/80">
         사진 한 장이면, 만점자 풀이가 내 손에.
       </p>
 
       <div
         ref={dropRef}
-        className={`group absolute left-1/2 -translate-x-1/2 top-[300px] w-[720px] h-[340px] rounded-[32px] border-2 border-dashed border-[#3BA7FF]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6 text-center transition-all duration-200 ${imageAttached ? 'bg-[#0A1625]/40' : 'bg-white/6 hover:bg-white/10 focus-within:bg-white/10'}`}
+        className={`group absolute left-1/2 -translate-x-1/2 top-[250px] w-[720px] h-[340px] rounded-[32px] border-2 border-dashed border-[#3BA7FF]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6 text-center transition-all duration-200 ${imageAttached ? 'bg-[#0A1625]/40' : 'bg-white/6 hover:bg-white/10 focus-within:bg-white/10'}`}
       >
-        <div className="w-20 h-20 rounded-full bg-[#0E1C2E] flex items-center justify-center shadow-[0_10px_30px_rgba(59,167,255,0.25)]">
-          <img src="/assets/desktop/chat-input-image.svg" alt="카메라" className="w-12 h-12 opacity-90 group-hover:opacity-100 transition-opacity" />
-        </div>
+        <button
+          type="button"
+          onClick={handleFilePick}
+          className="min-w-[220px] rounded-full bg-[#3BA7FF] px-8 py-4 text-[18px] font-semibold text-white shadow-[0_18px_38px_rgba(59,167,255,0.35)] transition-all duration-200 hover:bg-[#2F8ED6] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#3BA7FF]/35"
+        >
+          {imageAttached ? '사진 교체하기' : '파일 선택하기'}
+        </button>
         <div className="space-y-3">
           <p className="text-[20px] font-semibold">{imageAttached ? '사진이 첨부되었습니다.' : '여기에 문제 사진을 끌어다 놓거나 클릭해서 첨부하세요'}</p>
           <p className="text-[15px] text-white/70">선명한 사진일수록 더욱 정확한 풀이를 받을 수 있어요.</p>
         </div>
-        <button
-          onClick={handleFilePick}
-          className="px-6 py-3 rounded-full bg-[#3BA7FF] text-white font-semibold shadow-[0_12px_24px_rgba(59,167,255,0.35)] hover:bg-[#2F8ED6] transition-colors"
-        >
-          {imageAttached ? '사진 교체하기' : '파일 선택하기'}
-        </button>
-        <button
-          onClick={handleScrollToChat}
-          className="text-sm text-[#8ABFFF] underline hover:text-white transition-colors"
-        >
-          직접 입력하고 싶어요
-        </button>
       </div>
 
       <div id="chatbox-section">
@@ -250,7 +242,7 @@ export default function Hero() {
         <div className="absolute left-[136px] top-[980px] w-[928px] rounded-[24px] border border-white/10 bg-white/3 backdrop-blur-sm px-10 py-8 flex flex-col gap-4 text-white/85">
           <h3 className="text-[24px] font-semibold">곧 답변이 도착합니다</h3>
           <p className="text-[16px] leading-[1.6] text-white/70">
-            풀이가 도착하면 아래에서 바로 확인할 수 있어요. 추가 질문이 있다면 입력창에 미리 적어 두셔도 좋습니다.
+            풀이가 도착하면 아래에서 바로 확인할 수 있어요. 추가 질문이 있다면 입력창에 미리 적어 두셔도 좋아요!
           </p>
         </div>
       ) : (

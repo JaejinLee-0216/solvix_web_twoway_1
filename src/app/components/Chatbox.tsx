@@ -105,8 +105,10 @@ function Chatbox(
       });
 
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        console.error("Usage error:", errorPayload);
+        const errorPayload = await response.json().catch(() => undefined);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Usage error", { status: response.status, payload: errorPayload ?? null });
+        }
         setUsageReady(true);
         return;
       }
@@ -242,11 +244,6 @@ function Chatbox(
   };
 
   const handleSubmit = async () => {
-    if (variant === "desktop") {
-      window.open("/chat", "_blank");
-      return;
-    }
-
     if (!text && !image) return;
 
     // Check if user is logged in
@@ -499,15 +496,15 @@ function Chatbox(
 
   const containerClasses = isMobile
     ? "rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] p-4"
-    : "absolute left-[171px] w-[858px] h-[124px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)]";
+    : "absolute left-[171px] w-[858px] h-[160px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] flex flex-col";
 
   const textareaClasses = isMobile
     ? "w-full resize-none rounded-[12px] bg-transparent p-3 text-sm text-[#111] placeholder:text-[#666F8D] outline-none"
-    : "absolute left-[31px] top-[23px] right-[29px] bottom-[56px] resize-none outline-none text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D]";
+    : "flex-1 resize-none rounded-[12px] bg-transparent px-6 pt-5 pb-3 text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D] outline-none";
 
   const bottomBarClasses = isMobile
     ? "mt-3 flex items-center justify-between"
-    : "absolute left-[29px] bottom-[11px] right-[29px] flex items-center justify-between";
+    : "px-6 pb-4 flex items-center justify-between";
 
   const dailyUsageClasses = isMobile ? "text-[11px] text-[#666F8D]" : "text-[12px] text-[#666F8D]";
 

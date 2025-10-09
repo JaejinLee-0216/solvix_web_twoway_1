@@ -271,9 +271,10 @@ DECLARE
   v_unlimited BOOLEAN;
 BEGIN
   SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_user_id);
-  SELECT bonus_balance, unlimited INTO v_balance, v_unlimited
-  FROM public.user_question_balance
-  WHERE user_id = p_user_id;
+  SELECT q.bonus_balance, q.unlimited
+  INTO v_balance, v_unlimited
+  FROM public.user_question_balance AS q
+  WHERE q.user_id = p_user_id;
 
   IF NOT FOUND THEN
     INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
@@ -327,9 +328,10 @@ BEGIN
     SET updated_at = now()
   RETURNING * INTO v_usage;
 
-  SELECT bonus_balance, unlimited INTO v_bonus_balance, v_unlimited
-  FROM public.user_question_balance
-  WHERE user_id = p_user_id
+  SELECT q.bonus_balance, q.unlimited
+  INTO v_bonus_balance, v_unlimited
+  FROM public.user_question_balance AS q
+  WHERE q.user_id = p_user_id
   FOR UPDATE;
 
   IF NOT FOUND THEN
