@@ -34,7 +34,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [model, setModel] = useState("SOLVIX 1.0");
   const [style, setStyle] = useState("해설지");
   const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
-  const [isUnlimited, setIsUnlimited] = useState(false);
   const [dailyLoading, setDailyLoading] = useState(false);
   const [dailyError, setDailyError] = useState<string | null>(null);
   const [usageReady, setUsageReady] = useState(false);
@@ -65,13 +64,11 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     const bonus = usage?.bonusBalance ?? usage?.bonus_balance ?? 0;
     const unlimited = Boolean(usage?.unlimited);
     setDaily({ used, free, bonus, unlimited });
-    setIsUnlimited(unlimited);
   };
 
   const fetchUsage = async () => {
     if (!isLoggedIn) {
       setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
-      setIsUnlimited(false);
       setDailyError(null);
       setUsageReady(true);
       return;
@@ -198,13 +195,27 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     }
 
     if (!text && !image) return;
-    
+
     // Check if user is logged in
     if (!isLoggedIn) {
       setShowLoginWarning(true);
       return;
     }
-    
+
+    if (!usageReady) {
+      if (!dailyLoading) {
+        fetchUsage();
+      }
+      alert("일일 사용량 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    const totalAllowance = daily.unlimited ? Number.POSITIVE_INFINITY : daily.free + daily.bonus;
+    if (!daily.unlimited && daily.used >= totalAllowance) {
+      alert("일일 질문 횟수를 초과했습니다. 내일 다시 시도하거나 플랜을 업그레이드하세요.");
+      return;
+    }
+
     // Create abort controller for cancellation
     const controller = new AbortController();
     setAbortController(controller);
@@ -252,18 +263,24 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     setLoadingInterval(interval);
     
     try {
-      const res = await fetch(endpoint, { 
-        method: "POST", 
+      const res = await fetch(endpoint, {
+        method: "POST",
         body: form,
-        signal: controller.signal 
+        signal: controller.signal,
       });
-      
+
       // Check if request was aborted
       if (controller.signal.aborted) {
         return;
       }
-      
+
       const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const message = typeof data?.error === "string" && data.error.length > 0 ? data.error : "응답을 가져오지 못했습니다.";
+        throw new Error(message);
+      }
+
       const answer = data?.text ?? "";
       const normalizedAnswer = typeof answer === "string" ? answer.replace(/\\\\/g, "\\") : "";
       if (normalizedAnswer) {
@@ -271,6 +288,27 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
           ...m,
           { role: 'assistant', text: normalizedAnswer, showVisualization: false, visualization: null, id: generateId() },
         ]);
+      }
+
+      try {
+        const usageRes = await fetch("/api/usage", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ increment: 1 }),
+        });
+        const usagePayload = await usageRes.json().catch(() => ({}));
+
+        if (usageRes.ok) {
+          applyUsage(usagePayload?.usage ?? {});
+        } else if (usageRes.status === 429) {
+          applyUsage(usagePayload?.usage ?? {});
+          alert("일일 질문 횟수를 모두 사용했습니다. 내일 다시 시도하거나 플랜을 업그레이드하세요.");
+        } else {
+          console.warn("Failed to update usage", usagePayload);
+        }
+      } catch (usageError) {
+        console.error("Usage update failed", usageError);
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
