@@ -201,10 +201,10 @@ export default function Hero() {
       </div>
 
       <h1 className="absolute left-1/2 -translate-x-1/2 top-[120px] w-[640px] text-center text-[50px] leading-[1.1] font-semibold tracking-[-0.04em]">
-        수능 수학, 찍어서 풀이 받기.
+      문제 올리면 풀이 도착.
       </h1>
       <p className="absolute left-1/2 -translate-x-1/2 top-[200px] w-[520px] text-center text-[18px] text-white/80">
-        사진 한 장이면, 만점자 풀이가 내 손에.
+        사진 한 장이면, 만점자 풀이가 내 손에!
       </p>
 
       <div
