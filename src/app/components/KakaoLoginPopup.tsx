@@ -1,6 +1,4 @@
 "use client";
-import { useState } from "react";
-
 interface KakaoLoginPopupProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,8 +6,6 @@ interface KakaoLoginPopupProps {
 }
 
 export default function KakaoLoginPopup({ isOpen, onClose, onLoginSuccess }: KakaoLoginPopupProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
   if (!isOpen) return null;
 
   const handleKakaoLogin = () => {

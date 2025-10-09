@@ -1,6 +1,3 @@
-"use client";
-import { useState } from "react";
-
 interface PaymentPopupProps {
   isOpen: boolean;
   onClose: () => void;

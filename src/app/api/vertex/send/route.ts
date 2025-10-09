@@ -38,8 +38,6 @@ function resolveServiceAccountCredentials(): { client_email: string; private_key
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const text = String(form.get("text") || "");
-  const modelLabel = String(form.get("model") || "SOLVIX 1.0");
-  const style = String(form.get("style") || "해설지");
   const image = form.get("image") as File | null;
   const conversation = form.get("conversation") as string | null;
 

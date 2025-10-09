@@ -176,7 +176,7 @@ function parseVisualizationText(rawText: string): any {
     if (!candidate) continue;
     try {
       return JSON.parse(candidate);
-    } catch (_) {
+    } catch {
       const sanitized = sanitizeJson(candidate);
       if (!sanitized) continue;
       try {

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase RPC 함수 호출
-    const { data, error } = await supabaseAdmin.rpc("give_bonus_questions", {
+    const { error } = await supabaseAdmin.rpc("give_bonus_questions", {
       p_admin_user_id: adminUser.id,
       p_target_user_id: target_user_id,
       p_bonus_count: parseInt(bonus_count),

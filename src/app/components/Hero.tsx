@@ -140,10 +140,10 @@ export default function Hero() {
           <div className="absolute left-[296px] top-[323px] flex gap-[21px]">
             <SvgButton src="/assets/desktop/cta-solve.svg" alt="문제 풀이" width={168} height={57} selected={selection === "solve"} onClick={() => setSelection("solve")} />
             <div className="opacity-40 cursor-not-allowed">
-              <SvgButton src="/assets/desktop/cta-review.svg" alt="풀이 첨삭" width={189} height={57} selected={false} onClick={(e?: any) => {}} />
+              <SvgButton src="/assets/desktop/cta-review.svg" alt="풀이 첨삭" width={189} height={57} selected={false} />
             </div>
             <div className="opacity-40 cursor-not-allowed">
-              <SvgButton src="/assets/desktop/cta-error.svg" alt="문제 오류" width={196} height={57} selected={false} onClick={(e?: any) => {}} />
+              <SvgButton src="/assets/desktop/cta-error.svg" alt="문제 오류" width={196} height={57} selected={false} />
             </div>
           </div>
         </>
@@ -154,10 +154,10 @@ export default function Hero() {
         <div className="absolute left-[296px] top-[323px] flex gap-[21px]">
           <SvgButton src="/assets/desktop/cta-solve.svg" alt="문제 풀이" width={168} height={57} selected={selection === "solve"} onClick={() => setSelection("solve")} />
           <div className="opacity-40 cursor-not-allowed">
-            <SvgButton src="/assets/desktop/cta-review.svg" alt="풀이 첨삭" width={189} height={57} selected={false} onClick={(e?: any) => {}} />
+            <SvgButton src="/assets/desktop/cta-review.svg" alt="풀이 첨삭" width={189} height={57} selected={false} />
           </div>
           <div className="opacity-40 cursor-not-allowed">
-            <SvgButton src="/assets/desktop/cta-error.svg" alt="문제 오류" width={196} height={57} selected={false} onClick={(e?: any) => {}} />
+            <SvgButton src="/assets/desktop/cta-error.svg" alt="문제 오류" width={196} height={57} selected={false} />
           </div>
         </div>
       )}

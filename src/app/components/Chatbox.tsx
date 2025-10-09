@@ -35,7 +35,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [style, setStyle] = useState("해설지");
   const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
   const [dailyLoading, setDailyLoading] = useState(false);
-  const [dailyError, setDailyError] = useState<string | null>(null);
   const [usageReady, setUsageReady] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -51,7 +50,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
   const [isVisualizing, setIsVisualizing] = useState(false);
   const [visualizingTime, setVisualizingTime] = useState(0);
-  const [visualizingInterval, setVisualizingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [visualizingMessageIndex, setVisualizingMessageIndex] = useState<number | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -69,14 +67,12 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
   const fetchUsage = async () => {
     if (!isLoggedIn) {
       setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
-      setDailyError(null);
       setUsageReady(true);
       return;
     }
 
     try {
       setDailyLoading(true);
-      setDailyError(null);
 
       const response = await fetch("/api/usage", {
         credentials: "include",
@@ -84,7 +80,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => ({}));
-        setDailyError(errorPayload?.error ?? "일일 사용량을 불러오지 못했습니다.");
+        console.error("Usage error:", errorPayload);
         setUsageReady(true);
         return;
       }
@@ -94,7 +90,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       setUsageReady(true);
     } catch (error) {
       console.error("Failed to fetch usage", error);
-      setDailyError("일일 사용량을 불러오지 못했습니다.");
       setUsageReady(true);
     } finally {
       setDailyLoading(false);
@@ -138,7 +133,7 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         clearTimeout(copyTimeoutRef.current);
       }
     };
-  }, [isLoggedIn]);
+  }, [fetchUsage]);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -364,7 +359,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
     const interval = setInterval(() => {
       setVisualizingTime(prev => prev + 1);
     }, 1000);
-    setVisualizingInterval(interval);
 
     try {
       const response = await fetch('/api/vertex/visualize', {
@@ -431,7 +425,6 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
       // 시각화 로딩 종료
       if (interval) {
         clearInterval(interval);
-        setVisualizingInterval(null);
       }
       setIsVisualizing(false);
       setVisualizingTime(0);
@@ -671,9 +664,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
               </div>
 
               <div className="flex items-center gap-4">
-            <div className={dailyUsageClasses}>
-              하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
-            </div>
+                <div className={dailyUsageClasses}>
+                  하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
+                </div>
                 <button onClick={handleSubmit} className={sendButtonClasses}>
                   <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
                 </button>
@@ -683,11 +676,9 @@ export default function Chatbox({ onSubmit, onStartConversation, onReset, isLogg
         </div>
 
         {isLoading ? (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-2xl flex flex-col px-6 py-8 z-40 space-y-6">
-            <div className="flex-1 overflow-y-auto space-y-4">
-              {renderMobileMessages()}
-            </div>
-            <div className="flex flex-col items-center justify-center gap-4">
+          <div className={loadingOverlayClasses}>
+            <div className={loadingHistoryClasses}>{renderMobileMessages()}</div>
+            <div className={loadingContainerClasses}>
               <div className={spinnerWrapperClass}>
                 <div className={spinnerDotStyle}></div>
                 <div className={spinnerDotStyle} style={{ animationDelay: "0.1s" }}></div>
