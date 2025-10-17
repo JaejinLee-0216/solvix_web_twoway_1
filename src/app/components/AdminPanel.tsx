@@ -5,6 +5,7 @@ import MathRenderer from "./MathRenderer";
 interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onUsageUpdated?: () => void;
 }
 
 interface User {
@@ -28,7 +29,7 @@ interface UserConversation {
   style_used: string;
 }
 
-export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
+export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userConversations, setUserConversations] = useState<UserConversation[]>([]);
@@ -106,6 +107,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
       alert(data.message || `${selectedUser.nickname}님에게 ${bonusQuestions}개의 질문권을 증정했습니다.`);
       setBonusQuestions(0);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent('usage-updated'));
+      }
+      onUsageUpdated?.();
     } catch (error: any) {
       console.error("Failed to give bonus questions:", error);
       alert(`질문권 증정 실패: ${error.message}`);
@@ -134,8 +139,8 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 max-w-7xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-black">
+      <div className="bg-white rounded-2xl p-8 max-w-7xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden text-black">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">관리자 패널</h2>

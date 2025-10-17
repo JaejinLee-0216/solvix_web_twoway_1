@@ -9,7 +9,8 @@ import MyPage from "../MyPage";
 import AdminPanel from "../AdminPanel";
 
 export default function MobileLanding() {
-  const CHATBOX_INITIAL_OFFSET = 80;
+  const CHATBOX_INITIAL_OFFSET = 160;
+  const DROPZONE_VERTICAL_OFFSET = 50;
   const chatboxRef = useRef<ChatboxHandle | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,6 +22,7 @@ export default function MobileLanding() {
   const [imageAttached, setImageAttached] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [chatboxOffsetY, setChatboxOffsetY] = useState(CHATBOX_INITIAL_OFFSET);
+  const [dropzoneOffsetY, setDropzoneOffsetY] = useState(DROPZONE_VERTICAL_OFFSET);
   const [paymentPopup, setPaymentPopup] = useState<{ isOpen: boolean; planType: "basic" | "pro" | "ultra" }>(
     { isOpen: false, planType: "basic" }
   );
@@ -205,14 +207,14 @@ export default function MobileLanding() {
         </div>
       </header>
 
-      <main className="px-4 pb-16 space-y-6">
+      <main className="px-4 pb-16 space-y-0">
         <section className="text-center space-y-2">
           <h1 className="text-[26px] font-semibold leading-tight"> 막혔어? 올려봐!</h1>
           <p className="text-[11px] text-white/70"> 풀이 한 장만 올려봐요. 나머진 SOLVIX가 도와줄게요.</p>
         </section>
 
         {!hasConversationStarted ? (
-          <section>
+          <section style={dropzoneOffsetY !== 0 ? { transform: `translateY(${dropzoneOffsetY}px)` } : undefined}>
             <div
               ref={dropRef}
               className={`rounded-[18px] border-2 border-dashed border-[#3BA7FF]/70 bg-white/[0.06] flex flex-col items-center px-5 py-20 transition-all ${imageAttached ? "bg-[#0A1625]/40" : "hover:bg-white/10"}`}
@@ -234,7 +236,7 @@ export default function MobileLanding() {
           </section>
         ) : null}
 
-        <section className="pb-10">
+        <section className="pb-6">
           <Chatbox
             ref={chatboxRef}
             variant="mobile"
@@ -245,6 +247,7 @@ export default function MobileLanding() {
             onReset={() => {
               setImageAttached(false);
               setHasConversationStarted(false);
+              setDropzoneOffsetY(DROPZONE_VERTICAL_OFFSET);
             }}
             offsetY={chatboxOffsetY}
           />
@@ -338,7 +341,10 @@ export default function MobileLanding() {
       />
 
       <MyPage isOpen={showMyPage} onClose={() => setShowMyPage(false)} userInfo={userInfo} />
-      <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
+      <AdminPanel
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
+      />
     </div>
   );
 }

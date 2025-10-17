@@ -267,6 +267,22 @@ function Chatbox(
     };
   }, [fetchUsage]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleUsageUpdated = () => {
+      fetchUsage();
+    };
+
+    window.addEventListener("usage-updated", handleUsageUpdated);
+
+    return () => {
+      window.removeEventListener("usage-updated", handleUsageUpdated);
+    };
+  }, [fetchUsage]);
+
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     if (isMobile) {
@@ -845,11 +861,11 @@ function Chatbox(
               <div className="flex flex-col items-center gap-2">
                 <div className="flex flex-col items-center leading-tight">
                   <span className={`${dailyUsageClasses} whitespace-nowrap text-center`}>오늘 이용</span>
-                  <span className="text-[11px] font-semibold text-white whitespace-nowrap text-center">
+                  <span className="text-[11px] font-semibold text-[#0A1625] whitespace-nowrap text-center">
                     {daily.unlimited ? "무제한" : `${daily.used}/${daily.free}`}
                   </span>
                   {daily.unlimited ? (
-                    <span className="text-[8px] text-white/70 mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
+                    <span className="text-[8px] text-[#3A4A65] mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
                   ) : null}
                 </div>
                 <button onClick={handleSubmit} className={sendButtonClasses}>
