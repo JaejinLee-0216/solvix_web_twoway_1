@@ -270,6 +270,8 @@ DECLARE
   v_balance INT;
   v_unlimited BOOLEAN;
 BEGIN
+  PERFORM ensure_today_usage_row(p_user_id);
+
   SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_user_id);
   SELECT q.bonus_balance, q.unlimited
   INTO v_balance, v_unlimited
@@ -297,8 +299,10 @@ BEGIN
          v_daily_limit.free_daily,
          v_balance,
          v_unlimited
-  FROM public.user_usage uu
-  WHERE uu.user_id = p_user_id AND uu.usage_date = CURRENT_DATE;
+  FROM (SELECT 1) AS seed
+  LEFT JOIN public.user_usage uu
+    ON uu.user_id = p_user_id
+   AND uu.usage_date = CURRENT_DATE;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION increment_user_usage(p_user_id UUID, p_increment INT DEFAULT 1)
@@ -320,13 +324,14 @@ DECLARE
   v_bonus_used INT := 0;
   v_total_increment INT := p_increment;
 BEGIN
+  PERFORM ensure_today_usage_row(p_user_id);
+
   SELECT * INTO v_daily_limit FROM get_user_plan_daily_limit(p_user_id);
 
-  INSERT INTO public.user_usage (user_id, usage_date, daily_count, max_daily_count, bonus_questions, total_questions_used)
-  VALUES (p_user_id, CURRENT_DATE, 0, 0, 0, 0)
-  ON CONFLICT (user_id, usage_date) DO UPDATE
-    SET updated_at = now()
-  RETURNING * INTO v_usage;
+  SELECT * INTO v_usage
+  FROM public.user_usage
+  WHERE user_id = p_user_id AND usage_date = CURRENT_DATE
+  FOR UPDATE;
 
   SELECT q.bonus_balance, q.unlimited
   INTO v_bonus_balance, v_unlimited
@@ -431,13 +436,34 @@ BEGIN
   RETURN TRUE;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION ensure_today_usage_row(p_user_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  v_row public.user_usage%ROWTYPE;
+BEGIN
+  INSERT INTO public.user_usage (user_id, usage_date, daily_count, max_daily_count, bonus_questions, total_questions_used)
+  VALUES (p_user_id, CURRENT_DATE, 0, 0, 0, 0)
+  ON CONFLICT (user_id, usage_date) DO UPDATE
+    SET updated_at = now()
+  RETURNING * INTO v_row;
+
+  RETURN v_row.id;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Insert sample admin user (optional - for testing)
 -- INSERT INTO public.users (kakao_id, nickname, email, provider, is_admin) VALUES
 -- ('admin_kakao_123', '관리자', 'admin@solvix.com', 'kakao', true)
 -- ON CONFLICT (kakao_id) DO NOTHING;
 
 -- Grant permissions
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;

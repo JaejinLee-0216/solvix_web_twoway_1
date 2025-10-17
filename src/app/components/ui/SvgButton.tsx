@@ -7,9 +7,11 @@ type Props = {
   selected?: boolean;
   onClick?: () => void;
   className?: string;
+  overlayText?: string;
+  overlayClassName?: string;
 };
 
-export default function SvgButton({ src, alt, width, height, selected, onClick, className }: Props) {
+export default function SvgButton({ src, alt, width, height, selected, onClick, className, overlayText, overlayClassName }: Props) {
   return (
     <button
       type="button"
@@ -22,6 +24,11 @@ export default function SvgButton({ src, alt, width, height, selected, onClick, 
         <span className="absolute inset-[3px] rounded-[8px] ring-3 ring-sky-400 pointer-events-none" />
       ) : null}
       <img src={src} alt={alt} width={width} height={height} />
+      {overlayText ? (
+        <span className={`absolute pointer-events-none select-none ${overlayClassName || ""}`}>
+          {overlayText}
+        </span>
+      ) : null}
     </button>
   );
 }

@@ -28,10 +28,6 @@ export async function GET(request: NextRequest) {
   try {
     // 환경변수 확인
     const restApiKey = process.env.KAKAO_REST_API_KEY;
-    console.log("=== Environment Check ===");
-    console.log("KAKAO_REST_API_KEY exists:", !!restApiKey);
-    console.log("Full key:", restApiKey);
-    
     if (!restApiKey) {
       throw new Error("KAKAO_REST_API_KEY is not set");
     }
@@ -119,10 +115,12 @@ export async function GET(request: NextRequest) {
     };
 
     // 4. Supabase에 사용자 업서트
-    try {
-      console.log("Upserting user to Supabase...");
+    let supabaseUserId: string | null = null;
 
-      const { data: userId, error: upsertError } = await supabaseAdmin.rpc(
+    try {
+      console.log("Upserting user to Supabase via RPC...");
+
+      const { data: rpcUserId, error: upsertError } = await supabaseAdmin.rpc(
         "create_user_from_kakao",
         {
           p_kakao_id: userInfo.kakao_id,
@@ -134,30 +132,59 @@ export async function GET(request: NextRequest) {
       );
 
       if (upsertError) {
-        console.error("Supabase upsert error:", upsertError);
-        // Supabase 에러는 무시하고 계속 진행 (기본값으로)
-      } else {
-        console.log("User upserted with ID:", userId);
+        console.error("Supabase RPC upsert error:", upsertError);
+      } else if (rpcUserId) {
+        supabaseUserId = rpcUserId as string;
+        console.log("User upserted with ID via RPC:", supabaseUserId);
+      }
 
+      if (!supabaseUserId) {
+        console.log("Falling back to direct upsert on users table...");
+        const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+          .from("users")
+          .upsert(
+            {
+              kakao_id: userInfo.kakao_id,
+              nickname: userInfo.nickname,
+              email: userInfo.email,
+              profile_image_url: userInfo.profile_image,
+              provider: "kakao",
+            },
+            { onConflict: "kakao_id" }
+          )
+          .select("id, is_admin")
+          .single();
+
+        if (fallbackError) {
+          console.error("Supabase fallback upsert error:", fallbackError);
+        } else if (fallbackData?.id) {
+          supabaseUserId = fallbackData.id as string;
+          userInfo.isAdmin = Boolean(fallbackData.is_admin);
+          console.log("User upserted via fallback with ID:", supabaseUserId);
+        }
+      }
+
+      if (supabaseUserId) {
         // 현재 플랜 조회
         const { data: currentPlan, error: planError } = await supabaseAdmin.rpc(
           "get_user_current_plan",
-          { p_user_id: userId }
+          { p_user_id: supabaseUserId }
         );
 
         if (!planError && currentPlan) {
           userInfo.plan = currentPlan;
         }
 
-        // 관리자 여부 조회
-        const { data: userRecord } = await supabaseAdmin
-          .from("users")
-          .select("is_admin")
-          .eq("id", userId)
-          .single();
+        if (userInfo.isAdmin === false) {
+          const { data: userRecord } = await supabaseAdmin
+            .from("users")
+            .select("is_admin")
+            .eq("id", supabaseUserId)
+            .single();
 
-        if (userRecord?.is_admin) {
-          userInfo.isAdmin = true;
+          if (userRecord?.is_admin) {
+            userInfo.isAdmin = true;
+          }
         }
       }
     } catch (supabaseError) {

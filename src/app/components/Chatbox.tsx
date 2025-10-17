@@ -12,23 +12,26 @@ import LoginWarningPopup from "./LoginWarningPopup";
 import D3Visualization, { VisualizationData as D3VisualizationData } from "./D3Visualization";
 
 type Props = {
-  onSubmit?: (payload: { text: string; image?: File | null; model: string; style: string }) => void;
+  onSubmit?: (payload: { text: string; images: File[]; model: string; style: string }) => void;
   onStartConversation?: () => void;
   onReset?: () => void;
   isLoggedIn?: boolean;
   onLoginRequest?: () => void;
   variant?: "desktop" | "mobile";
   onImageAttached?: (attached: boolean) => void;
+  offsetY?: number;
 };
 
 export type ChatboxHandle = {
   attachImage: (file: File) => void;
+  attachImages: (files: FileList | File[]) => void;
   focusInput: () => void;
 };
 
 type Message = {
-  role: 'user' | 'assistant'; 
-  text: string; 
+  role: 'user' | 'assistant';
+  text: string;
+  images?: string[];
   image?: string;
   visualization?: D3VisualizationData | null;
   showVisualization?: boolean;
@@ -42,6 +45,16 @@ const generateId = () => {
   return `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const MAX_IMAGES = 5;
+
+const getAttachmentIndicatorSrc = (count: number) => {
+  const clamped = Math.min(Math.max(count, 0), MAX_IMAGES);
+  if (clamped === 0) {
+    return "/assets/desktop/chat-input-image.svg";
+  }
+  return `/assets/desktop/chat-input-image-${clamped}.svg`;
+};
+
 const Chatbox = forwardRef<ChatboxHandle, Props>(
 function Chatbox(
   {
@@ -52,6 +65,7 @@ function Chatbox(
     onLoginRequest,
     variant = "desktop",
     onImageAttached,
+    offsetY = 0,
   }: Props,
   ref
 ) {
@@ -61,8 +75,10 @@ function Chatbox(
   const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
   const [dailyLoading, setDailyLoading] = useState(false);
   const [usageReady, setUsageReady] = useState(false);
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const imagesRef = useRef<File[]>([]);
+  const previewUrlsRef = useRef<string[]>([]);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -106,6 +122,11 @@ function Chatbox(
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => undefined);
+        if (response.status === 404) {
+          setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
+          setUsageReady(true);
+          return;
+        }
         if (process.env.NODE_ENV !== "production") {
           console.error("Usage error", { status: response.status, payload: errorPayload ?? null });
         }
@@ -124,30 +145,79 @@ function Chatbox(
     }
   }, [applyUsage, isLoggedIn]);
 
-  const applyImageFile = useCallback((file: File) => {
-    if (!file) return;
-    setImage(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    onImageAttached?.(true);
+  const updateImageAttachedState = useCallback((nextCount: number) => {
+    onImageAttached?.(nextCount > 0);
   }, [onImageAttached]);
+
+  useEffect(() => {
+    updateImageAttachedState(images.length);
+  }, [images, updateImageAttachedState]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  useEffect(() => {
+    previewUrlsRef.current = imagePreviews;
+  }, [imagePreviews]);
+
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrlsRef.current = [];
+    };
+  }, []);
+
+  const resetImagesState = useCallback(() => {
+    imagesRef.current = [];
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrlsRef.current = [];
+    setImages([]);
+    setImagePreviews([]);
+    if (fileInput.current) {
+      fileInput.current.value = "";
+    }
+  }, []);
+
+  const applyImageFiles = useCallback((incomingFiles: FileList | File[]) => {
+    const filesArray = Array.from(incomingFiles).filter((item): item is File =>
+      item instanceof File && item.size > 0
+    );
+
+    if (filesArray.length === 0) {
+      return;
+    }
+
+    const currentImages = imagesRef.current;
+    const availableSlots = MAX_IMAGES - currentImages.length;
+
+    if (availableSlots <= 0) {
+      return;
+    }
+
+    const acceptedFiles = filesArray.slice(0, availableSlots);
+
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+
+    const nextImages = [...currentImages, ...acceptedFiles];
+    const newPreviewUrls = acceptedFiles.map((file) => URL.createObjectURL(file));
+    const nextPreviews = [...previewUrlsRef.current, ...newPreviewUrls];
+
+    imagesRef.current = nextImages;
+    previewUrlsRef.current = nextPreviews;
+    setImages(nextImages);
+    setImagePreviews(nextPreviews);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     attachImage: (file: File) => {
       if (!file) return;
-      applyImageFile(file);
-      if (fileInput.current) {
-        try {
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(file);
-          fileInput.current.files = dataTransfer.files;
-        } catch (error) {
-          console.warn("Failed to sync file input", error);
-        }
-      }
+      applyImageFiles([file]);
+    },
+    attachImages: (files: FileList | File[]) => {
+      applyImageFiles(files);
     },
     focusInput: () => {
       if (textareaRef.current) {
@@ -156,7 +226,7 @@ function Chatbox(
         textareaRef.current.setSelectionRange(value.length, value.length);
       }
     },
-  }), [applyImageFile]);
+  }), [applyImageFiles]);
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -230,21 +300,32 @@ function Chatbox(
 
   const handleImagePick = () => fileInput.current?.click();
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      applyImageFile(f);
+    if (e.target.files) {
+      applyImageFiles(e.target.files);
+      e.target.value = "";
     }
   };
 
-  const handleRemoveImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    if (fileInput.current) fileInput.current.value = "";
-    onImageAttached?.(false);
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      imagesRef.current = next;
+      return next;
+    });
+    setImagePreviews((prev) => {
+      const target = prev[index];
+      if (target) {
+        URL.revokeObjectURL(target);
+      }
+      const next = prev.filter((_, i) => i !== index);
+      previewUrlsRef.current = next;
+      return next;
+    });
   };
 
   const handleSubmit = async () => {
-    if (!text && !image) return;
+    const trimmedText = text.trim();
+    if (!trimmedText && images.length === 0) return;
 
     // Check if user is logged in
     if (!isLoggedIn) {
@@ -270,14 +351,16 @@ function Chatbox(
     const controller = new AbortController();
     setAbortController(controller);
     
-    onSubmit?.({ text, image, model, style });
+    onSubmit?.({ text: trimmedText, images, model, style });
     const form = new FormData();
-    form.append("text", text);
+    form.append("text", trimmedText);
     form.append("model", model);
     form.append("style", style);
     // Send conversation history for context
     form.append("conversation", JSON.stringify(messages));
-    if (image) form.append("image", image);
+    images.forEach((file) => {
+      form.append("images", file);
+    });
     const useGenAi = (process.env.NEXT_PUBLIC_USE_GENAI || "").toLowerCase() === "true";
     const endpoint = useGenAi ? "/api/vertex/send/route_second" : "/api/vertex/send";
     
@@ -288,24 +371,34 @@ function Chatbox(
     onStartConversation?.();
     
     // Add user message with image if present
-    const userMessageBase = { role: 'user' as const, text };
-    if (image) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        setMessages((m) => [...m, { ...userMessageBase, image: imageData, id: generateId() }]);
-      };
-      reader.readAsDataURL(image);
+    const userMessageBase = { role: "user" as const, text: trimmedText };
+    if (images.length > 0) {
+      Promise.all(images.map((file) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve((e.target?.result as string) ?? "");
+        reader.onerror = () => reject(new Error("Failed to load image preview"));
+        reader.readAsDataURL(file);
+      }))).then((imageDataList) => {
+        setMessages((m) => [
+          ...m,
+          {
+            ...userMessageBase,
+            images: imageDataList,
+            id: generateId(),
+          },
+        ]);
+      }).catch((error) => {
+        console.error("Failed to attach images to message", error);
+        setMessages((m) => (m.length === 0 ? [{ ...userMessageBase, id: generateId() }] : [...m, { ...userMessageBase, id: generateId() }]));
+      });
     } else {
       setMessages((m) => (m.length === 0 ? [{ ...userMessageBase, id: generateId() }] : [...m, { ...userMessageBase, id: generateId() }]));
     }
     
     // Clear chatbox immediately
     setText("");
-    setImage(null);
-    setImagePreview(null);
-    if (fileInput.current) fileInput.current.value = "";
-    onImageAttached?.(false);
+    resetImagesState();
+    updateImageAttachedState(0);
     
     // Start loading timer
     const interval = setInterval(() => {
@@ -396,6 +489,7 @@ function Chatbox(
     setConversationMode(false);
     setMessages([]);
     setAbortController(null);
+    resetImagesState();
     
     // Reset hero state to show buttons again
     onReset?.();
@@ -495,37 +589,41 @@ function Chatbox(
   const desktopConversationStyle = !isMobile ? { top: 260 } : undefined;
 
   const containerClasses = isMobile
-    ? "rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] p-4"
+    ? "rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] px-3 py-2 flex flex-col gap-1"
     : "absolute left-[171px] w-[858px] h-[160px] rounded-[16px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] flex flex-col";
 
   const textareaClasses = isMobile
-    ? "w-full resize-none rounded-[12px] bg-transparent p-3 text-sm text-[#111] placeholder:text-[#666F8D] outline-none"
+    ? "h-[30px] w-full resize-none rounded-[12px] bg-transparent px-2 pt-2 text-[12px] text-[#111] placeholder:text-[#8090AF] outline-none"
     : "flex-1 resize-none rounded-[12px] bg-transparent px-6 pt-5 pb-3 text-[15px] leading-[1.5] text-black placeholder:text-[#666F8D] outline-none";
 
   const bottomBarClasses = isMobile
-    ? "mt-3 flex items-center justify-between"
+    ? "flex items-center justify-between"
     : "px-6 pb-4 flex items-center justify-between";
 
-  const dailyUsageClasses = isMobile ? "text-[11px] text-[#666F8D]" : "text-[12px] text-[#666F8D]";
+  const dailyUsageClasses = isMobile ? "text-[8px] text-[#8090AF]" : "text-[12px] text-[#666F8D]";
 
   const sendButtonClasses = isMobile ? "cursor-pointer" : "cursor-pointer relative -translate-y-[2px]";
 
+  const draftsWrapperClasses = isMobile
+    ? "flex items-center gap-2"
+    : "flex items-center gap-3";
+
   const imagePreviewClasses = isMobile
-    ? "absolute right-3 -top-20 w-[64px] h-[64px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-lg overflow-hidden"
-    : "absolute left-[171px] w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
+    ? "relative w-[64px] h-[64px] rounded-[12px] border border-[#F0F2F5]/40 bg-transparent shadow-lg overflow-hidden"
+    : "relative w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
 
   const removeButtonClasses = isMobile
     ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[14px]"
-    : "absolute top-[2px] right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
+    : "absolute top-[4px] right-[4px] w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
 
   const wrapperClasses = isMobile ? "relative" : "";
   const bubbleStyles = isMobile
     ? { user: "bg-[#E9F3FF] text-[#0A1625]", assistant: "bg-white text-[#111] border border-[#E1E6F0]" }
     : { user: "bg-[#262626]", assistant: "bg-[#141414] border border-white/10" };
-  const bubbleBaseClasses = isMobile ? "px-4 py-3 rounded-[14px]" : "px-4 py-3 rounded-[10px]";
+  const bubbleBaseClasses = isMobile ? "px-3 py-2 rounded-[12px]" : "px-4 py-3 rounded-[10px]";
   const messageOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[90%]";
   const loadingOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[80%]";
-  const messageTextClass = isMobile ? "text-[13px] leading-[1.6] whitespace-pre-wrap" : "text-sm whitespace-pre-wrap";
+  const messageTextClass = isMobile ? "text-[11px] leading-[1.6] whitespace-pre-wrap" : "text-sm whitespace-pre-wrap";
   const copyButtonClass = isMobile
     ? "inline-flex items-center gap-1 text-xs text-[#0075DC] hover:text-[#005bb5] transition-colors"
     : "inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors";
@@ -553,15 +651,28 @@ function Chatbox(
   const spinnerWrapperClass = isMobile ? "flex space-x-1 mb-4" : "flex space-x-1 mb-4";
   const spinnerDotStyle = isMobile ? "w-2 h-2 bg-white rounded-full animate-bounce" : "w-2 h-2 bg-white rounded-full animate-bounce";
   const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
+  const wrapperStyle = offsetY !== 0 ? { transform: `translateY(${offsetY}px)` } : undefined;
+
+  const extractMessageImages = (msg: Message): string[] => {
+    if (Array.isArray(msg.images) && msg.images.length > 0) {
+      return msg.images.filter((src): src is string => typeof src === "string" && src.length > 0);
+    }
+    if (typeof msg.image === "string" && msg.image.length > 0) {
+      return [msg.image];
+    }
+    return [];
+  };
 
   if (isMobile) {
     const mobileMessages = messages.map((m, i) => (
       <div key={m.id ?? i} className={m.role === "user" ? "text-right" : "text-left"}>
         <div className={messageOuterClass}>
           <div className={`${bubbleBaseClasses} ${m.role === "user" ? bubbleStyles.user : bubbleStyles.assistant}`}>
-            {m.image ? (
-              <div className="mb-2">
-                <img src={m.image} alt="attached" className="max-w-full max-h-[200px] object-contain rounded" />
+            {extractMessageImages(m).length > 0 ? (
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                {extractMessageImages(m).map((imgSrc, idx) => (
+                  <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-full max-h-[150px] object-contain rounded" />
+                ))}
               </div>
             ) : null}
             <MathRenderer text={m.text} className={messageTextClass} />
@@ -623,19 +734,23 @@ function Chatbox(
     );
 
     return (
-      <div className="relative">
+      <div className="relative" style={wrapperStyle}>
         <div className="space-y-4">
-          {imagePreview ? (
-            <div className={imagePreviewClasses}>
-              <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-              <button onClick={handleRemoveImage} className={removeButtonClasses}>
-                ×
-              </button>
+          {imagePreviews.length > 0 ? (
+            <div className={draftsWrapperClasses}>
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className={imagePreviewClasses}>
+                  <img src={preview} alt={`preview-${index + 1}`} className="w-full h-full object-cover" />
+                  <button onClick={() => handleRemoveImage(index)} className={removeButtonClasses}>
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           ) : null}
 
-          {conversationMode && !isLoading ? (
-            <div ref={mobileWrapperRef} className="rounded-2xl border border-white/10 bg-[#0A1625] p-4 max-h-[360px] overflow-y-auto space-y-4">
+          {conversationMode ? (
+            <div ref={mobileWrapperRef} className="p-4 max-h-[360px] overflow-y-auto space-y-4">
               {renderMobileMessages()}
             </div>
           ) : null}
@@ -646,7 +761,7 @@ function Chatbox(
               mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
             }}
           >
-            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -656,8 +771,12 @@ function Chatbox(
             />
             <div className={bottomBarClasses}>
               <div className="flex items-center gap-2">
-                <button onClick={handleImagePick} aria-label="이미지 첨부" className="cursor-pointer">
-                  <img src={image ? "/assets/desktop/chat-input-image-1.svg" : "/assets/desktop/chat-input-image.svg"} alt="이미지 첨부" width={62} height={34} />
+                <button
+                  onClick={handleImagePick}
+                  aria-label={`이미지 첨부 (${imagePreviews.length}/${MAX_IMAGES})`}
+                  className="cursor-pointer"
+                >
+                  <img src={getAttachmentIndicatorSrc(imagePreviews.length)} alt="이미지 첨부" width={62} height={34} />
                 </button>
 
                 <div className="relative">
@@ -723,9 +842,15 @@ function Chatbox(
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className={dailyUsageClasses}>
-                  하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center leading-tight">
+                  <span className={`${dailyUsageClasses} whitespace-nowrap text-center`}>오늘 이용</span>
+                  <span className="text-[11px] font-semibold text-white whitespace-nowrap text-center">
+                    {daily.unlimited ? "무제한" : `${daily.used}/${daily.free}`}
+                  </span>
+                  {daily.unlimited ? (
+                    <span className="text-[8px] text-white/70 mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
+                  ) : null}
                 </div>
                 <button onClick={handleSubmit} className={sendButtonClasses}>
                   <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
@@ -745,6 +870,7 @@ function Chatbox(
                 <div className={spinnerDotStyle} style={{ animationDelay: "0.2s" }}></div>
               </div>
               <p className={loadingTextClass}>답변을 작성 중이에요...</p>
+              <p className="text-gray-200 text-xs mb-1">평균 45초 소요</p>
               <p className={loadingTimeClass}>소요시간 {loadingTime}초</p>
               <button onClick={handleCancel} className={loadingCancelButtonClass}>
                 취소
@@ -766,13 +892,20 @@ function Chatbox(
   }
 
   return (
-    <div className={wrapperClasses}>
-      {imagePreview && (
-        <div className={imagePreviewClasses} style={desktopPreviewStyle}>
-          <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-          <button onClick={handleRemoveImage} className={removeButtonClasses}>
-            ×
-          </button>
+    <div className={wrapperClasses} style={wrapperStyle}>
+      {imagePreviews.length > 0 && (
+        <div
+          className={`${draftsWrapperClasses} absolute left-[171px]`}
+          style={desktopPreviewStyle}
+        >
+          {imagePreviews.map((preview, index) => (
+            <div key={`desktop-preview-${index}`} className={imagePreviewClasses}>
+              <img src={preview} alt={`preview-${index + 1}`} className="w-full h-full object-cover" />
+              <button onClick={() => handleRemoveImage(index)} className={removeButtonClasses}>
+                ×
+              </button>
+            </div>
+          ))}
         </div>
       )}
       
@@ -785,15 +918,15 @@ function Chatbox(
           }
         }}
       >
-        <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+        <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
         {/* text input area */}
         <textarea
-              ref={textareaRef}
+        ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="질문을 입력하거나 추가 안내를 적어 주세요"
-          className={textareaClasses}
-          rows={isMobile ? 4 : undefined}
+        placeholder="질문을 입력하거나 추가 안내를 적어 주세요"
+        className={textareaClasses}
+        rows={isMobile ? 3 : undefined}
         />
         {/* bottom actions */}
         <div className={bottomBarClasses}>
@@ -801,12 +934,12 @@ function Chatbox(
             {/* full-SVG buttons per design */}
             <button
               onClick={handleImagePick}
-              aria-label="이미지 첨부"
+              aria-label={`이미지 첨부 (${imagePreviews.length}/${MAX_IMAGES})`}
               className="cursor-pointer"
             >
-              <img 
-                src={image ? "/assets/desktop/chat-input-image-1.svg" : "/assets/desktop/chat-input-image.svg"} 
-                alt="이미지 첨부" 
+              <img
+                src={getAttachmentIndicatorSrc(imagePreviews.length)}
+                alt="이미지 첨부"
                 width={isMobile ? 62 : 78}
                 height={isMobile ? 34 : 42}
               />
@@ -884,7 +1017,7 @@ function Chatbox(
           </div>
           <div className="flex items-center gap-4">
             <div className={dailyUsageClasses}>
-              하루 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free} (보너스 ${daily.bonus})`}
+              오늘 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free}`}
             </div>
             <button onClick={handleSubmit} className={sendButtonClasses}>
               <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={isMobile ? 30 : 42} height={isMobile ? 30 : 42} />
@@ -901,11 +1034,13 @@ function Chatbox(
               {messages.map((m, i) => (
                 <div key={m.id ?? i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                   <div className={`inline-block max-w-[80%] px-4 py-3 rounded-[10px] ${m.role === 'user' ? 'bg-[#262626]' : 'bg-[#141414] border border-white/10'}`}>
-                    {m.image && (
-                      <div className="mb-2">
-                        <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                    {extractMessageImages(m).length > 0 ? (
+                      <div className="mb-2 grid grid-cols-2 gap-2">
+                        {extractMessageImages(m).map((imgSrc, idx) => (
+                          <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                        ))}
                       </div>
-                    )}
+                    ) : null}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
@@ -938,6 +1073,7 @@ function Chatbox(
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
                 <p className="text-white text-lg mb-2">답변을 작성 중이에요...</p>
+              <p className="text-gray-400 text-sm mb-1">평균 45초 소요</p>
                 <p className="text-gray-300 text-sm mb-4">소요시간 {loadingTime}초</p>
                 <button 
                   onClick={handleCancel}
@@ -960,11 +1096,13 @@ function Chatbox(
               <div key={m.id ?? i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                 <div className="inline-block max-w-[90%]">
                   <div className={`px-4 py-3 rounded-[10px] ${m.role === 'user' ? 'bg-[#262626]' : 'bg-[#141414] border border-white/10'}`}>
-                    {m.image && (
-                      <div className="mb-2">
-                        <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                    {extractMessageImages(m).length > 0 ? (
+                      <div className="mb-2 grid grid-cols-2 gap-2">
+                        {extractMessageImages(m).map((imgSrc, idx) => (
+                          <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                        ))}
                       </div>
-                    )}
+                    ) : null}
                     <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
@@ -985,11 +1123,13 @@ function Chatbox(
                         </button>
                       </div>
                     )}
-                    {m.image && (
-                      <div className="mb-2">
-                        <img src={m.image} alt="attached" className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                    {extractMessageImages(m).length > 0 ? (
+                      <div className="mb-2 grid grid-cols-2 gap-2">
+                        {extractMessageImages(m).map((imgSrc, idx) => (
+                          <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-[200px] max-h-[150px] object-contain rounded" />
+                        ))}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   
                   {/* 시각화 버튼 및 시각화 (AI 답변에만 표시) */}

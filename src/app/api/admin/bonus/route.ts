@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase RPC 함수 호출
-    const { error } = await supabaseAdmin.rpc("give_bonus_questions", {
+    const { error, data } = await supabaseAdmin.rpc("give_bonus_questions", {
       p_admin_user_id: adminUser.id,
       p_target_user_id: target_user_id,
       p_bonus_count: parseInt(bonus_count),
@@ -43,7 +43,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to give bonus questions" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: `${bonus_count}개의 질문권이 추가되었습니다.` });
+    const targetUser = await supabaseAdmin
+      .from("user_question_balance")
+      .select("bonus_balance, unlimited")
+      .eq("user_id", target_user_id)
+      .single();
+
+    return NextResponse.json({
+      success: true,
+      message: `${bonus_count}개의 질문권이 추가되었습니다.`,
+      balance: targetUser.data ?? null,
+    });
   } catch (error) {
     console.error("Admin bonus API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

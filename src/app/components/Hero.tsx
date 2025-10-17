@@ -74,8 +74,10 @@ export default function Hero() {
           setIsLoggedIn(true);
           setUserPlan(data.user.plan || 'basic');
           setUserInfo(data.user);
-          // Also save to localStorage for persistence
           localStorage.setItem('userInfo', JSON.stringify(data.user));
+          if (data.user.isAdmin) {
+            setShowAdminPanel(false);
+          }
         }
       }
     } catch (error) {
@@ -84,9 +86,12 @@ export default function Hero() {
       const savedUserInfo = localStorage.getItem('userInfo');
       if (savedUserInfo) {
         const userInfo = JSON.parse(savedUserInfo);
-        setIsLoggedIn(true);
-        setUserPlan(userInfo.plan || 'basic');
-        setUserInfo(userInfo);
+          setIsLoggedIn(true);
+          setUserPlan(userInfo.plan || 'basic');
+          setUserInfo(userInfo);
+          if (userInfo.isAdmin) {
+            setShowAdminPanel(false);
+          }
       }
     }
   };
@@ -127,7 +132,7 @@ export default function Hero() {
       unhighlight();
       const files = event.dataTransfer?.files;
       if (files && files.length > 0) {
-        chatboxRef.current?.attachImage(files[0]);
+        chatboxRef.current?.attachImages(files);
       }
     };
 
@@ -150,9 +155,9 @@ export default function Hero() {
     input.accept = "image/*";
     input.onchange = (event: Event) => {
       const target = event.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (file) {
-        chatboxRef.current?.attachImage(file);
+      const files = target.files;
+      if (files && files.length > 0) {
+        chatboxRef.current?.attachImages(files);
       }
     };
     input.click();
@@ -164,7 +169,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="container-1200 relative" style={{ height: 1405 }}>
+    <section className="container-1200 relative font-[var(--font-sans)]" style={{ height: 1405 }}>
       {/* Background */}
       {/* Logo */}
       <div className="absolute left-[136px] top-[13px] w-[153px] h-[42px] bg-[url('/assets/desktop/nav_logo.png')] bg-contain bg-no-repeat" />

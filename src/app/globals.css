@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Pretendard";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-variable.woff2") format("woff2-variations");
+}
+
 /* Design tokens */
 :root {
   --bg: #020103; /* Desktop frame fill */
@@ -17,8 +25,8 @@
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-plus-jakarta);
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-serif: var(--font-source-serif);
   --font-mono: var(--font-geist-mono);
 }
@@ -26,6 +34,8 @@
 body {
   background: var(--bg);
   color: var(--fg);
+  font-family: var(--font-sans);
+  font-weight: 400;
 }
 
 /* Utilities mapping Figma styles */
