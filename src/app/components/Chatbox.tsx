@@ -20,6 +20,7 @@ type Props = {
   variant?: "desktop" | "mobile";
   onImageAttached?: (attached: boolean) => void;
   offsetY?: number;
+  controlsOffsetY?: number;
 };
 
 export type ChatboxHandle = {
@@ -66,12 +67,13 @@ function Chatbox(
     variant = "desktop",
     onImageAttached,
     offsetY = 0,
+    controlsOffsetY = 0,
   }: Props,
   ref
 ) {
   const [text, setText] = useState("");
   const [model, setModel] = useState("SOLVIX 1.0");
-  const [style, setStyle] = useState("해설지");
+  const style = "해설지";
   const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
   const [dailyLoading, setDailyLoading] = useState(false);
   const [usageReady, setUsageReady] = useState(false);
@@ -89,7 +91,6 @@ function Chatbox(
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [showLoginWarning, setShowLoginWarning] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [showStyleDropdown, setShowStyleDropdown] = useState(false);
   const [isVisualizing, setIsVisualizing] = useState(false);
   const [visualizingTime, setVisualizingTime] = useState(0);
   const [visualizingMessageIndex, setVisualizingMessageIndex] = useState<number | null>(null);
@@ -99,11 +100,67 @@ function Chatbox(
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const applyUsage = useCallback((usage: any) => {
-    const used = usage?.usedToday ?? usage?.daily_count ?? 0;
-    const free = usage?.freeDaily ?? usage?.free_daily ?? 0;
-    const bonus = usage?.bonusBalance ?? usage?.bonus_balance ?? 0;
-    const unlimited = Boolean(usage?.unlimited);
-    setDaily({ used, free, bonus, unlimited });
+    setDaily((prev) => {
+    const usedCandidates = [usage?.usedToday, usage?.daily_count, usage?.used].filter(
+      (value): value is number => typeof value === "number" && Number.isFinite(value)
+    );
+
+      const incrementApplied = typeof usage?.incrementApplied === "number"
+        ? usage.incrementApplied
+        : typeof usage?.increment_applied === "number"
+          ? usage.increment_applied
+          : null;
+
+      const usedFromIncrement = incrementApplied && incrementApplied > 0 ? prev.used + incrementApplied : null;
+      const usedPool = [prev.used, ...usedCandidates];
+      if (typeof usedFromIncrement === "number") {
+        usedPool.push(usedFromIncrement);
+      }
+      const nextUsed = Math.max(...usedPool, 0);
+
+      const remainingFreeRaw = typeof usage?.remainingFree === "number"
+        ? usage.remainingFree
+        : typeof usage?.remaining_free === "number"
+          ? usage.remaining_free
+          : null;
+
+      const freeDailyRaw = typeof usage?.freeDaily === "number"
+        ? usage.freeDaily
+        : typeof usage?.free_daily === "number"
+          ? usage.free_daily
+          : null;
+
+      let nextFreeTotal = prev.free;
+
+      if (remainingFreeRaw != null && Number.isFinite(remainingFreeRaw)) {
+        nextFreeTotal = Math.max(nextUsed + Math.max(remainingFreeRaw, 0), 0);
+      } else if (freeDailyRaw != null && Number.isFinite(freeDailyRaw)) {
+        if (freeDailyRaw < nextUsed) {
+          nextFreeTotal = Math.max(nextUsed + Math.max(freeDailyRaw, 0), 0);
+        } else {
+          nextFreeTotal = Math.max(freeDailyRaw, 0);
+        }
+      } else if (prev.free === 0 && nextUsed > 0) {
+        nextFreeTotal = nextUsed;
+      }
+
+      const bonusRaw = typeof usage?.bonusBalance === "number"
+        ? usage.bonusBalance
+        : typeof usage?.bonus_balance === "number"
+          ? usage.bonus_balance
+          : null;
+
+      const nextBonus = bonusRaw != null && Number.isFinite(bonusRaw) ? Math.max(bonusRaw, 0) : prev.bonus;
+
+      const unlimited = Boolean(usage?.unlimited ?? usage?.isUnlimited ?? prev.unlimited);
+
+      return {
+        used: nextUsed,
+        free: nextFreeTotal,
+        bonus: nextBonus,
+        unlimited,
+      };
+    });
   }, []);
 
   const fetchUsage = useCallback(async () => {
@@ -300,19 +357,18 @@ function Chatbox(
 
   // Close dropdowns when clicking outside
   useEffect(() => {
+    if (!showModelDropdown) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.relative')) {
         setShowModelDropdown(false);
-        setShowStyleDropdown(false);
       }
     };
 
-    if (showModelDropdown || showStyleDropdown) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showModelDropdown, showStyleDropdown]);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showModelDropdown]);
 
   const handleImagePick = () => fileInput.current?.click();
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -629,8 +685,8 @@ function Chatbox(
     : "relative w-[70px] h-[70px] rounded-[12px] border border-[#F0F2F5] bg-white shadow-[0_2px_4px_rgba(25,33,61,0.08)] overflow-hidden";
 
   const removeButtonClasses = isMobile
-    ? "absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[14px]"
-    : "absolute top-[4px] right-[4px] w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center text-[15px] hover:bg-black/70 cursor-pointer";
+    ? "absolute top-1 right-1 p-1 text-white/70 hover:text-white cursor-pointer"
+    : "absolute top-[4px] right-[4px] p-1 text-white/70 hover:text-white cursor-pointer";
 
   const wrapperClasses = isMobile ? "relative" : "";
   const bubbleStyles = isMobile
@@ -668,6 +724,9 @@ function Chatbox(
   const spinnerDotStyle = isMobile ? "w-2 h-2 bg-white rounded-full animate-bounce" : "w-2 h-2 bg-white rounded-full animate-bounce";
   const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
   const wrapperStyle = offsetY !== 0 ? { transform: `translateY(${offsetY}px)` } : undefined;
+  const controlsOffsetStyle = isMobile && controlsOffsetY !== 0 ? { transform: `translateY(${controlsOffsetY}px)` } : undefined;
+
+  const totalAllowance = daily.unlimited ? Infinity : daily.free + daily.bonus;
 
   const extractMessageImages = (msg: Message): string[] => {
     if (Array.isArray(msg.images) && msg.images.length > 0) {
@@ -751,14 +810,14 @@ function Chatbox(
 
     return (
       <div className="relative" style={wrapperStyle}>
-        <div className="space-y-4">
+        <div className="space-y-4" style={controlsOffsetStyle}>
           {imagePreviews.length > 0 ? (
             <div className={draftsWrapperClasses}>
               {imagePreviews.map((preview, index) => (
                 <div key={index} className={imagePreviewClasses}>
                   <img src={preview} alt={`preview-${index + 1}`} className="w-full h-full object-cover" />
-                  <button onClick={() => handleRemoveImage(index)} className={removeButtonClasses}>
-                    ×
+                  <button onClick={() => handleRemoveImage(index)} className={`${removeButtonClasses} text-[16px]`} aria-label="이미지 제거">
+                    <span className="material-symbols-rounded text-[16px]">close</span>
                   </button>
                 </div>
               ))}
@@ -826,43 +885,13 @@ function Chatbox(
                   ) : null}
                 </div>
 
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setShowStyleDropdown(!showStyleDropdown);
-                      setShowModelDropdown(false);
-                    }}
-                    aria-label="해설 스타일"
-                    className="cursor-pointer"
-                  >
-                    <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={88} height={28} />
-                  </button>
-                  {showStyleDropdown ? (
-                    <div className="absolute bottom-full left-0 mb-2 w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
-                      <button
-                        onClick={() => {
-                          setStyle("해설지");
-                          setShowStyleDropdown(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${style === "해설지" ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"}`}
-                      >
-                        <img src="/assets/desktop/three_line_icon.svg" alt="해설지" className="w-5 h-5" />
-                        <span>해설지</span>
-                      </button>
-                      <button disabled className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400">
-                        <img src="/assets/desktop/teacher_icon.png" alt="과외 선생님" className="w-5 h-5" />
-                        <span>과외 선생님</span>
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
               </div>
 
               <div className="flex flex-col items-center gap-2">
                 <div className="flex flex-col items-center leading-tight">
                   <span className={`${dailyUsageClasses} whitespace-nowrap text-center`}>오늘 이용</span>
                   <span className="text-[11px] font-semibold text-[#0A1625] whitespace-nowrap text-center">
-                    {daily.unlimited ? "무제한" : `${daily.used}/${daily.free}`}
+                    {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free + daily.bonus}`}
                   </span>
                   {daily.unlimited ? (
                     <span className="text-[8px] text-[#3A4A65] mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
@@ -996,44 +1025,10 @@ function Chatbox(
               )}
             </div>
             
-            {/* Style Select with Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowStyleDropdown(!showStyleDropdown);
-                  setShowModelDropdown(false);
-                }} 
-                aria-label="해설 스타일" 
-                className="cursor-pointer"
-              >
-                <img src="/assets/desktop/chat-style-select.svg" alt="해설 스타일" width={isMobile ? 88 : 101} height={isMobile ? 28 : 34} />
-              </button>
-              {showStyleDropdown && (
-                <div className="absolute bottom-full left-0 mb-2 w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
-                  <button
-                    onClick={() => {
-                      setStyle("해설지");
-                      setShowStyleDropdown(false);
-                    }}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${style === "해설지" ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"}`}
-                  >
-                    <img src="/assets/desktop/three_line_icon.svg" alt="해설지" className="w-5 h-5" />
-                    <span>해설지</span>
-            </button>
-                  <button
-                    disabled
-                    className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400"
-                  >
-                    <img src="/assets/desktop/teacher_icon.png" alt="과외 선생님" className="w-5 h-5" />
-                    <span>과외 선생님</span>
-            </button>
-                </div>
-              )}
-            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className={dailyUsageClasses}>
-              오늘 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free}`}
+              오늘 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free + daily.bonus}`}
             </div>
             <button onClick={handleSubmit} className={sendButtonClasses}>
               <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={isMobile ? 30 : 42} height={isMobile ? 30 : 42} />

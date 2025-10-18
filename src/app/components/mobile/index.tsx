@@ -27,6 +27,8 @@ export default function MobileLanding() {
     { isOpen: false, planType: "basic" }
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuClosing, setMenuClosing] = useState(false);
+  const menuHideTimeoutRef = useRef<number | null>(null);
   const [infoPopup, setInfoPopup] = useState<"performance" | "testimonials" | "pricing" | null>(null);
 
   const syncLoginState = useCallback((info: any | null) => {
@@ -171,10 +173,36 @@ export default function MobileLanding() {
     };
   }, []);
 
-  const closeAllPopups = () => {
-    setMenuOpen(false);
-    setInfoPopup(null);
+  const clearMenuHideTimer = () => {
+    if (menuHideTimeoutRef.current !== null) {
+      window.clearTimeout(menuHideTimeoutRef.current);
+      menuHideTimeoutRef.current = null;
+    }
   };
+
+  const closeMenu = (afterClose?: () => void) => {
+    setInfoPopup(null);
+    setMenuClosing(true);
+    clearMenuHideTimer();
+    menuHideTimeoutRef.current = window.setTimeout(() => {
+      setMenuOpen(false);
+      setMenuClosing(false);
+      menuHideTimeoutRef.current = null;
+      afterClose?.();
+    }, 260);
+  };
+
+  const openMenu = () => {
+    clearMenuHideTimer();
+    setMenuClosing(false);
+    setMenuOpen(true);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearMenuHideTimer();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen w-full bg-[#03050A] text-white font-[var(--font-sans)]">
@@ -193,16 +221,11 @@ export default function MobileLanding() {
             {isLoggedIn ? "로그아웃" : "로그인"}
           </button>
           <button
-            onClick={() => setMenuOpen(true)}
-            className="flex h-8 w-8 items-center justify-center"
+            onClick={openMenu}
+            className="flex h-8 w-8 items-center justify-center text-white hover:text-white/80"
             aria-label="메뉴 열기"
           >
-            <span className="sr-only">메뉴 열기</span>
-            <div className="space-y-1">
-              <span className="block h-[2px] w-4 rounded bg-white" />
-              <span className="block h-[2px] w-4 rounded bg-white" />
-              <span className="block h-[2px] w-4 rounded bg-white" />
-            </div>
+            <span className="material-symbols-rounded text-[24px]">menu</span>
           </button>
         </div>
       </header>
@@ -255,79 +278,234 @@ export default function MobileLanding() {
       </main>
 
       {menuOpen ? (
-        <div className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm px-6 py-8 flex flex-col">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white/80">빠른 안내</h2>
-            <button onClick={closeAllPopups} className="h-8 w-8 flex items-center justify-center rounded-full bg-white/12 text-lg">
-              ×
-            </button>
+        <div className="fixed inset-0 z-40 flex flex-row">
+          <button
+            aria-label="메뉴 닫기"
+            onClick={() => closeMenu()}
+            className={`flex-1 bg-black/70 backdrop-blur-sm transition-opacity duration-300 ease-out ${menuClosing ? "opacity-0" : "opacity-100"}`}
+          />
+          <nav
+            className={`w-[82%] max-w-[320px] bg-[rgba(5,8,16,0.96)] border-l border-white/8 px-6 py-8 flex flex-col gap-7 shadow-[0_20px_60px_rgba(9,16,35,0.45)] transition-transform duration-300 ease-out ${menuClosing ? "translate-x-full" : "translate-x-0"}`}
+          >
+            <div className="flex items-center justify-between pb-5">
+              <div className="relative flex items-center gap-2 rounded-[14px] border border-white/12 bg-white/[0.03] px-3 py-2 shadow-[0_10px_30px_rgba(12,22,40,0.35)]">
+                <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={92} height={24} className="drop-shadow-[0_0_10px_rgba(76,180,255,0.45)]" />
+                <span className="text-[10px] font-semibold text-[#4CB4FF] uppercase tracking-[0.5em]">beta</span>
+                <span className="absolute -bottom-2 left-1/2 h-[2px] w-[120%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#4CB4FF]/50 to-transparent" />
+              </div>
+              <button onClick={() => closeMenu()} className="h-8 w-8 flex items-center justify-center text-white hover:text-white/80" aria-label="메뉴 닫기">
+                <span className="material-symbols-rounded text-[20px]">close</span>
+              </button>
           </div>
-          <div className="mt-6 space-y-2.5 text-[13px] text-white/85">
+
+            <div className="space-y-3 text-sm font-medium">
+              <button
+                onClick={() => closeMenu(() => setInfoPopup("performance"))}
+                className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
+              >
+                <span className="text-[14px]">성능 비교</span>
+                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+              </button>
+              <button
+                onClick={() => closeMenu(() => setInfoPopup("testimonials"))}
+                className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
+              >
+                <span className="text-[14px]">사용 후기</span>
+                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+              </button>
+              <button
+                onClick={() => closeMenu(() => setInfoPopup("pricing"))}
+                className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
+              >
+                <span className="text-[14px]">요금제 안내</span>
+                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+              </button>
+            </div>
+
+            <div className="mt-auto space-y-3">
             {isLoggedIn ? (
-              <button onClick={() => { setMenuOpen(false); setShowMyPage(true); }} className="w-full rounded-xl bg-white/6 border border-white/12 px-4 py-3 text-left">
+                <button
+                  onClick={() => closeMenu(() => setShowMyPage(true))}
+                  className="w-full rounded-2xl bg-[#3BA7FF] text-[#02040A] text-[14px] font-semibold py-3 shadow-[0_12px_30px_rgba(59,167,255,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                >
                 마이페이지 열기
               </button>
-            ) : null}
+              ) : (
+                <div className="grid grid-cols-2 gap-3 text-[13px] font-semibold">
+                  <button
+                    onClick={() => closeMenu(() => setShowLoginPopup(true))}
+                    className="rounded-2xl border border-white/12 py-2.5 text-white/85 transition-colors duration-200 hover:bg-white/10"
+                  >
+                    로그인
+                  </button>
+                  <button
+                    onClick={() => closeMenu(() => setPaymentPopup({ isOpen: true, planType: "basic" }))}
+                    className="rounded-2xl bg-[#3BA7FF] text-[#02040A] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    회원가입
+                  </button>
+                </div>
+              )}
+
             {isLoggedIn && userInfo?.isAdmin ? (
-              <button onClick={() => { setMenuOpen(false); setShowAdminPanel(true); }} className="w-full rounded-xl bg-white/6 border border-white/12 px-4 py-3 text-left text-red-300">
+                <button
+                  onClick={() => closeMenu(() => setShowAdminPanel(true))}
+                  className="w-full rounded-2xl border border-red-400/40 text-red-200/90 text-[13px] font-semibold py-2.5 transition-colors duration-200 hover:bg-red-500/10"
+                >
                 관리자 패널 열기
               </button>
             ) : null}
-            <button onClick={() => { setInfoPopup("performance"); setMenuOpen(false); }} className="w-full rounded-xl bg-white/6 border border-white/12 px-4 py-3 text-left">
-              성능 비교
-            </button>
-            <button onClick={() => { setInfoPopup("testimonials"); setMenuOpen(false); }} className="w-full rounded-xl bg-white/6 border border-white/12 px-4 py-3 text-left">
-              사용 후기
-            </button>
-            <button onClick={() => { setInfoPopup("pricing"); setMenuOpen(false); }} className="w-full rounded-xl bg-white/6 border border-white/12 px-4 py-3 text-left">
-              요금제 안내
-            </button>
+
+              <p className="text-[10px] text-white/40 text-center tracking-[0.2em] uppercase">
+                solvix / learning engine
+              </p>
           </div>
+          </nav>
         </div>
       ) : null}
 
       {infoPopup ? (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm px-6 py-10 flex items-center justify-center">
-          <div className="w-full max-w-xs rounded-2xl bg-[#0A1625] border border-white/10 px-5 py-6 space-y-5">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm">
+          <div className="absolute inset-y-6 left-1/2 w-[90%] max-w-sm -translate-x-1/2 overflow-hidden rounded-2xl bg-[#10131A] border border-white/10 shadow-[0_20px_60px_rgba(5,10,20,0.45)]">
+            <div className="sticky top-0 z-10 bg-[#10131A] px-5 pt-6 pb-4 border-b border-white/8 text-center">
+              <h2 className="text-[17px] font-semibold text-white">SOLVIX, 더 활용하고 싶으신가요?</h2>
+              <p className="mt-1 text-[12px] text-white/60">나에게 맞는 요금제를 선택하세요.</p>
+              <button
+                onClick={() => {
+                  setInfoPopup(null);
+                }}
+                className="absolute right-4 top-4 h-8 w-8 flex items-center justify-center text-white hover:text-white/80"
+                aria-label="요금제 닫기"
+              >
+                <span className="material-symbols-rounded text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div className="relative h-[70vh] overflow-y-auto px-5 pb-6">
+              <div className="space-y-5">
             {infoPopup === "performance" ? (
-              <>
-                <h3 className="text-base font-semibold">SOLVIX 성능</h3>
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold text-white">SOLVIX 성능</h3>
                 <img src="/assets/desktop/score_graph.svg" alt="성능 비교 그래프" className="w-full rounded-xl" />
                 <p className="text-[12px] text-white/70 leading-[1.5]">
-                  최고 난도 모의고사에서도 만점을 기록했고, 평균 풀이 시간은 3분 15초입니다. 다른 AI보다 빠르고 정확해요.
+                  최고난도 모의고사에서도 만점을 기록했고, 평균 풀이 시간은 3분 15초입니다. 다른 AI보다 빠르고 정확해요.
                 </p>
-              </>
+                  </div>
             ) : null}
+
             {infoPopup === "testimonials" ? (
-              <>
-                <h3 className="text-base font-semibold">생생한 후기를 확인해 보세요</h3>
-                <div className="space-y-2">
-                  <img src="/assets/desktop/card1.svg" alt="후기 1" className="w-36 max-w-full mx-auto rounded-lg" />
-                  <img src="/assets/desktop/card2.svg" alt="후기 2" className="w-36 max-w-full mx-auto rounded-lg" />
-                  <img src="/assets/desktop/card3.svg" alt="후기 3" className="w-36 max-w-full mx-auto rounded-lg" />
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold text-white">생생한 후기를 확인해 보세요</h3>
+                    <div className="flex flex-col items-center gap-2">
+                      <img src="/assets/desktop/card1.svg" alt="후기 1" className="w-36 max-w-full rounded-lg" />
+                      <img src="/assets/desktop/card2.svg" alt="후기 2" className="w-36 max-w-full rounded-lg" />
+                      <img src="/assets/desktop/card3.svg" alt="후기 3" className="w-36 max-w-full rounded-lg" />
+                    </div>
+                    <p className="text-[12px] text-white/65 text-center">
+                      더 많은 후기가 필요하시면 톡으로 말씀해 주세요. 바로 보내 드릴게요.
+                    </p>
                 </div>
-                <p className="text-[12px] text-white/65">더 많은 후기가 필요하시면 톡으로 말씀해 주세요. 바로 보내 드릴게요.</p>
-              </>
             ) : null}
+
             {infoPopup === "pricing" ? (
-              <>
-                <h3 className="text-base font-semibold">요금제 살펴보기</h3>
-                <div className="space-y-2">
-                  <img src="/assets/desktop/plan_basic.svg" alt="Basic 플랜" className="w-full" />
-                  <img src="/assets/desktop/plan_pro.svg" alt="Pro 플랜" className="w-full" />
-                  <img src="/assets/desktop/plan_ultra.svg" alt="Ultra 플랜" className="w-full" />
+                  <div className="space-y-3 text-left text-white/85">
+                    <div className="rounded-2xl border border-white/12 bg-[#151822] px-5 py-5 shadow-[0_12px_32px_rgba(5,10,20,0.45)]">
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/55">Basic</div>
+                      <div className="mt-2 text-[20px] font-semibold text-white">무료</div>
+                      <p className="mt-2 text-[12px] leading-[1.6] text-white/65">
+                        SOLVIX의 핵심 기능을 직접 경험해 보세요.
+                      </p>
+                      <div className="mt-4 space-y-1.5 text-[12px] leading-[1.5] text-white/80">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 문제풀이 (최초 5회 제공)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>매일 풀이 1회 제공</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>풀이 내역 무제한 열람</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/12 bg-[#151822] px-5 py-5 shadow-[0_12px_32px_rgba(5,10,20,0.55)]">
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/55">Pro</div>
+                      <div className="mt-1 text-[12px] font-semibold text-[#FF7A8B]">커피 두 잔만 절약하세요!</div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-[26px] font-semibold text-white">₩9,900</span>
+                        <span className="text-[12px] text-white/60">/월</span>
+                        <span className="text-[12px] text-white/30 line-through">₩19,900</span>
+                      </div>
+                      <div className="mt-3 space-y-2 text-[12px] leading-[1.6] text-white/80">
+                        <div className="font-semibold text-white/85">Basic 플랜의 모든 기능 포함</div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 문제 풀이 (매일 10회 제공)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 풀이 첨삭 (매일 3회 제공)</span>
+                        </div>
                 </div>
                 <button
-                  onClick={() => setPaymentPopup({ isOpen: true, planType: "basic" })}
-                  className="w-full rounded-full bg-[#3BA7FF] py-3 text-[13px] font-semibold text-white hover:bg-[#2F8ED6]"
-                >
-                  결제 옵션 보기
+                        onClick={() => setPaymentPopup({ isOpen: true, planType: "pro" })}
+                        className="mt-4 w-full rounded-full bg-white text-[#09142A] py-2.5 text-[13px] font-semibold shadow-[0_10px_24px_rgba(255,255,255,0.35)] hover:bg-white/90"
+                      >
+                        Pro 플랜 시작하기
+                      </button>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/12 bg-[#151822] px-5 py-5 shadow-[0_12px_36px_rgba(5,10,22,0.6)]">
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/55">Ultra</div>
+                      <div className="mt-1 text-[26px] font-semibold text-white">
+                        ₩39,900<span className="ml-2 text-[12px] text-white/70">/월</span>
+                      </div>
+                      <div className="text-[12px] text-white/50 line-through">₩79,900</div>
+                      <div className="mt-3 space-y-2 text-[12px] leading-[1.6] text-white/82">
+                        <div className="font-semibold text-white/85">Pro 플랜의 모든 기능 포함</div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 문제풀이 (무제한 제공)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 풀이 첨삭 (무제한 제공)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>AI 문제 검증 (무제한 제공)</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span>TEAM MEDICAL T.A와의 1:1 질의응답권 (매일 5회 제공)</span>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-[10px] text-white/55">* T.A는 Teaching Assistant(질답 조교)의 약자입니다.</p>
+                    <button
+                      onClick={() => setPaymentPopup({ isOpen: true, planType: "ultra" })}
+                      className="mt-4 w-full rounded-full border border-white/70 bg-white/10 py-2.5 text-[13px] font-semibold text-white hover:bg-white/18"
+                    >
+                      Ultra 플랜 상담 신청
                 </button>
-              </>
+                    </div>
+                </div>
             ) : null}
-            <button onClick={closeAllPopups} className="w-full rounded-full border border-white/20 py-3 text-sm text-white/80">
+
+                {infoPopup !== "pricing" ? (
+                  <button
+                    onClick={() => {
+                      setInfoPopup(null);
+                    }}
+                    className="mt-6 w-full rounded-full border border-white/20 py-3 text-sm text-white/80"
+                  >
               닫기
             </button>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

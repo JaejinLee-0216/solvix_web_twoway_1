@@ -38,6 +38,10 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+        />
       </head>
       <body className={`${inter.variable} ${plusJakarta.variable} ${sourceSerif.variable} ${geistMono.variable} antialiased`}>
         {children}

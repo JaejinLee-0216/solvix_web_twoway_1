@@ -38,9 +38,10 @@ export default function PaymentPopup({ isOpen, onClose, planType }: PaymentPopup
           <h2 className="text-2xl font-bold text-gray-800">결제하기</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="flex items-center justify-center text-gray-400 hover:text-gray-600 w-8 h-8"
+            aria-label="닫기"
           >
-            ×
+            <span className="material-symbols-rounded text-[20px]">close</span>
           </button>
         </div>
 

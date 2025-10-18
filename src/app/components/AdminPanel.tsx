@@ -147,8 +147,9 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-2xl"
+            aria-label="닫기"
           >
-            ×
+            <span className="material-symbols-rounded text-[24px]">close</span>
           </button>
         </div>
 
