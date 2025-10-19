@@ -22,8 +22,10 @@ interface User {
 interface UserConversation {
   id: string;
   user_id: string;
+  session_id?: string;
   question: string;
   answer: string;
+  image_urls?: string[];
   created_at: string;
   model_used: string;
   style_used: string;
@@ -140,30 +142,30 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-black">
-      <div className="bg-white rounded-2xl p-8 max-w-7xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden text-black">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-5xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden text-black text-sm sm:text-base">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">관리자 패널</h2>
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">관리자 패널</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl"
             aria-label="닫기"
           >
             <span className="material-symbols-rounded text-[24px]">close</span>
           </button>
         </div>
 
-        <div className="flex gap-6 h-[70vh]">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 h-[70vh]">
           {/* Left Side - Users List */}
-          <div className="w-1/3 border-r pr-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">회원 목록</h3>
+          <div className="lg:w-1/3 border-r border-transparent lg:border-gray-200 lg:pr-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">회원 목록</h3>
             
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
                 <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              <div className="space-y-3 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-3 overflow-y-auto max-h-[30vh] lg:max-h-[60vh] pr-1">
                 {users.map((user) => (
                   <div
                     key={user.id}
@@ -194,11 +196,11 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
           </div>
 
           {/* Right Side - User Details and Conversations */}
-          <div className="w-2/3">
+          <div className="lg:w-2/3 flex-1">
             {selectedUser ? (
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">
                     {selectedUser.nickname}님의 상세 정보
                   </h3>
                   
@@ -223,7 +225,7 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
 
                 {/* User Info */}
                 <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">이메일:</span>
                       <span className="ml-2 font-medium">{selectedUser.email}</span>
@@ -246,12 +248,12 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
                 </div>
 
                 {/* Conversations */}
-                <h4 className="text-md font-semibold text-gray-800 mb-3">질문-답변 내역</h4>
-                <div className="space-y-3 overflow-y-auto max-h-[40vh]">
+                <h4 className="text-base sm:text-md font-semibold text-gray-800 mb-3">질문-답변 내역</h4>
+                <div className="space-y-3 overflow-y-auto max-h-[30vh] sm:max-h-[40vh] pr-1">
                   {userConversations.map((conversation) => (
                     <div key={conversation.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs sm:text-sm text-gray-500">
                           {formatDate(conversation.created_at)}
                         </div>
                         <div className="flex gap-2 text-xs">
@@ -269,6 +271,18 @@ export default function AdminPanel({ isOpen, onClose, onUsageUpdated }: AdminPan
                         <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                           {conversation.question}
                         </div>
+                        {conversation.image_urls && conversation.image_urls.length > 0 ? (
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            {conversation.image_urls.map((src, index) => (
+                              <img
+                                key={`${conversation.id}-img-${index}`}
+                                src={src}
+                                alt={`conversation-${conversation.id}-image-${index + 1}`}
+                                className="w-full rounded-lg object-cover"
+                              />
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                       
                       <div>

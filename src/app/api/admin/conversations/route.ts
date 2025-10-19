@@ -1,6 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
+const FALLBACK_MODEL = "SOLVIX 1.0";
+const FALLBACK_STYLE = "해설지";
+
+const parseImageUrls = (value: unknown): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string" && item.length > 0);
+    }
+  } catch (error) {
+    // treat as single entry
+  }
+
+  return [trimmed];
+};
+
 export async function GET(request: NextRequest) {
   try {
     const userInfoCookie = request.cookies.get("userInfo");
@@ -32,34 +65,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
     }
 
-    // 질문-답변 쌍으로 그룹화
     const grouped: any[] = [];
     const sessions = new Map<string, any[]>();
 
     conversations?.forEach((conv) => {
-      if (!sessions.has(conv.session_id)) {
-        sessions.set(conv.session_id, []);
-      }
-      sessions.get(conv.session_id)!.push(conv);
+      const list = sessions.get(conv.session_id) ?? [];
+      list.push(conv);
+      sessions.set(conv.session_id, list);
     });
 
-    sessions.forEach((sessionConvs) => {
-      for (let i = 0; i < sessionConvs.length; i += 2) {
-        const userMsg = sessionConvs.find((c, idx) => idx >= i && c.message_type === 'user');
-        const assistantMsg = sessionConvs.find((c, idx) => idx >= i && c.message_type === 'assistant');
-        
-        if (userMsg && assistantMsg) {
-          grouped.push({
-            id: userMsg.id,
+    sessions.forEach((sessionConvs, sessionIdValue) => {
+      const ordered = [...sessionConvs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      let lastUserEntry: any | null = null;
+
+      ordered.forEach((entry) => {
+        if (entry.message_type === 'user') {
+          const record = {
+            id: entry.id,
             user_id: userId,
-            question: userMsg.message_content,
-            answer: assistantMsg.message_content,
-            created_at: userMsg.created_at,
-            model_used: userMsg.model_used || 'SOLVIX 1.0',
-            style_used: userMsg.style_used || '해설지',
-          });
+            session_id: sessionIdValue,
+            question: entry.message_content,
+            answer: "",
+            image_urls: parseImageUrls(entry.image_url),
+            created_at: entry.created_at,
+            model_used: entry.model_used || FALLBACK_MODEL,
+            style_used: entry.style_used || FALLBACK_STYLE,
+          };
+          grouped.push(record);
+          lastUserEntry = record;
+        } else if (entry.message_type === 'assistant') {
+          if (lastUserEntry) {
+            lastUserEntry.answer = entry.message_content;
+          } else {
+            grouped.push({
+              id: entry.id,
+              user_id: userId,
+              session_id: sessionIdValue,
+              question: "",
+              answer: entry.message_content,
+              image_urls: [],
+              created_at: entry.created_at,
+              model_used: entry.model_used || FALLBACK_MODEL,
+              style_used: entry.style_used || FALLBACK_STYLE,
+            });
+          }
         }
-      }
+      });
     });
 
     return NextResponse.json({ conversations: grouped });

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { VertexAI } from "@google-cloud/vertexai";
 import { readFileSync } from "fs";
+import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 const DEFAULT_TUTOR_PROMPT = `역할: 너는 고등학생들의 수능 수학 문제를 함께 풀어주는 친근한 대학생 멘토 AI야. 너의 목표는 정답을 알려주는 것이 아니라, 학생이 스스로 생각의 벽을 넘을 수 있도록 돕는 페이스메이커야. 딱딱한 AI가 아니라, 재치 있고 다정한 과외 선생님처럼 행동해 줘.
 
@@ -20,6 +21,112 @@ const DEFAULT_TUTOR_PROMPT = `역할: 너는 고등학생들의 수능 수학 �
 3. 가벼운 입버릇 사용: 문장 사이사이에 "음...", "뭐", "그", "저"와 같은 가벼운 감탄사나 입버릇을 조금씩 섞어 말문을 여는 느낌을 줍니다.
 4. 수학 기호 표기: 수학과 관련된 모든 문자나 기호는 LaTeX 수식 표기(예: $x^2$)를 활용합니다.
 5. 이해도 확인: 학생의 이해를 확인하는 짧은 질문이나 다음 학습 방향 제안을 포함합니다.`;
+
+const FALLBACK_MODEL = "SOLVIX 1.0";
+const FALLBACK_STYLE = "해설지";
+
+type PreparedImage = {
+  base64: string;
+  mime: string;
+  dataUrl: string;
+};
+
+const generateSessionId = () => {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (error) {
+    // ignore
+  }
+  return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const resolveSupabaseUserId = async (request: NextRequest): Promise<string | null> => {
+  try {
+    const userInfoCookie = request.cookies.get("userInfo");
+    if (!userInfoCookie?.value) {
+      return null;
+    }
+
+    const parsed = JSON.parse(userInfoCookie.value);
+    const kakaoId = parsed?.kakao_id ?? parsed?.id;
+    if (!kakaoId) {
+      return null;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("kakao_id", kakaoId)
+      .single();
+
+    if (error || !data) {
+      if (error) {
+        console.error("Supabase user lookup error:", error);
+      }
+      return null;
+    }
+
+    return data.id as string;
+  } catch (error) {
+    console.error("Failed to parse userInfo cookie:", error);
+    return null;
+  }
+};
+
+const persistConversation = async (
+  request: NextRequest,
+  params: {
+    sessionId: string;
+    question: string;
+    answer: string;
+    images: PreparedImage[];
+    model: string;
+    style: string;
+  }
+) => {
+  const userId = await resolveSupabaseUserId(request);
+  if (!userId) {
+    return;
+  }
+
+  if (!params.question && params.images.length === 0 && !params.answer) {
+    return;
+  }
+
+  try {
+    const payload: Array<Record<string, unknown>> = [];
+
+    payload.push({
+      user_id: userId,
+      session_id: params.sessionId,
+      message_type: "user",
+      message_content: params.question,
+      image_url: params.images.length > 0
+        ? JSON.stringify(params.images.map((item) => item.dataUrl))
+        : null,
+      model_used: params.model,
+      style_used: params.style,
+    });
+
+    if (params.answer) {
+      payload.push({
+        user_id: userId,
+        session_id: params.sessionId,
+        message_type: "assistant",
+        message_content: params.answer,
+        image_url: null,
+        model_used: params.model,
+        style_used: params.style,
+      });
+    }
+
+    await supabaseAdmin.from("user_conversations").insert(payload);
+  } catch (error) {
+    console.error("Failed to persist conversation:", error);
+  }
+};
 
 export const runtime = "nodejs";
 
@@ -58,6 +165,12 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const text = String(form.get("text") || "");
   const conversation = form.get("conversation") as string | null;
+  const model = String(form.get("model") || FALLBACK_MODEL);
+  const style = String(form.get("style") || FALLBACK_STYLE);
+  const sessionRaw = form.get("sessionId");
+  const sessionId = typeof sessionRaw === "string" && sessionRaw.trim().length > 0
+    ? sessionRaw.trim()
+    : generateSessionId();
 
   const imageEntries = form.getAll("images");
   const images = imageEntries.filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -65,6 +178,19 @@ export async function POST(req: NextRequest) {
   if (images.length === 0 && legacyImage instanceof File && legacyImage.size > 0) {
     images.push(legacyImage);
   }
+
+  const preparedImages: PreparedImage[] = await Promise.all(
+    images.map(async (file) => {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const mime = file.type || "image/png";
+      return {
+        base64,
+        mime,
+        dataUrl: `data:${mime};base64,${base64}`,
+      };
+    })
+  );
 
   if (!text && images.length === 0) {
     return new Response(JSON.stringify({ error: "Empty request" }), { status: 400 });
@@ -94,12 +220,10 @@ export async function POST(req: NextRequest) {
       // Build request body with conversation context
       const parts: any[] = [{ text: DEFAULT_TUTOR_PROMPT }];
       if (text) parts.push({ text });
-      if (images.length > 0) {
-        for (const file of images) {
-          const arrayBuffer = await file.arrayBuffer();
-          const b64 = Buffer.from(arrayBuffer).toString("base64");
-          parts.push({ inline_data: { mime_type: file.type || "image/png", data: b64 } });
-        }
+      if (preparedImages.length > 0) {
+        preparedImages.forEach(({ base64, mime }) => {
+          parts.push({ inline_data: { mime_type: mime, data: base64 } });
+        });
       }
 
       // Parse conversation history
@@ -192,6 +316,15 @@ export async function POST(req: NextRequest) {
       .map((c: any) => c?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join("\n"))
       .filter(Boolean)
       .join("\n\n");
+
+    await persistConversation(req, {
+      sessionId,
+      question: text,
+      answer: textOut,
+      images: preparedImages,
+      model,
+      style,
+    });
 
     return new Response(
       JSON.stringify({ ok: true, text: textOut, raw: resp.response }),

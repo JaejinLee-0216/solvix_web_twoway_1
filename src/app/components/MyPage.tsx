@@ -10,9 +10,10 @@ interface MyPageProps {
 
 interface SolutionHistory {
   id: string;
+  session_id?: string;
   question: string;
   answer: string;
-  image_url?: string;
+  image_urls?: string[];
   created_at: string;
   model_used: string;
   style_used: string;
@@ -62,26 +63,26 @@ export default function MyPage({ isOpen, onClose, userInfo }: MyPageProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-black">
-      <div className="bg-white rounded-2xl p-8 max-w-6xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden text-black">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-4xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-hidden text-black text-sm sm:text-base">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">마이페이지</h2>
-            <p className="text-gray-600">안녕하세요, {userInfo?.nickname || '사용자'}님!</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">마이페이지</h2>
+            <p className="text-gray-600 text-sm sm:text-base">안녕하세요, {userInfo?.nickname || '사용자'}님!</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl"
             aria-label="닫기"
           >
             <span className="material-symbols-rounded text-[24px]">close</span>
           </button>
         </div>
 
-        <div className="flex gap-6 h-[70vh]">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 h-[70vh]">
           {/* Left Side - Solution History List */}
-          <div className="w-1/2 border-r pr-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">풀이 내역</h3>
+          <div className="lg:w-1/2 border-r border-transparent lg:border-gray-200 lg:pr-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">풀이 내역</h3>
             
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
@@ -92,7 +93,7 @@ export default function MyPage({ isOpen, onClose, userInfo }: MyPageProps) {
                 아직 풀이 내역이 없습니다.
               </div>
             ) : (
-              <div className="space-y-3 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-3 overflow-y-auto max-h-[30vh] lg:max-h-[60vh] pr-1">
                 {solutionHistory.map((solution) => (
                   <div
                     key={solution.id}
@@ -103,10 +104,10 @@ export default function MyPage({ isOpen, onClose, userInfo }: MyPageProps) {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="text-sm text-gray-500 mb-2">
+                    <div className="text-xs sm:text-sm text-gray-500 mb-2">
                       {formatDate(solution.created_at)}
                     </div>
-                    <div className="text-gray-800 font-medium mb-2 line-clamp-2">
+                    <div className="text-gray-800 font-medium mb-2 line-clamp-2 text-sm sm:text-base">
                       {solution.question}
                     </div>
                     <div className="flex gap-2 text-xs text-gray-500">
@@ -124,20 +125,32 @@ export default function MyPage({ isOpen, onClose, userInfo }: MyPageProps) {
           </div>
 
           {/* Right Side - Solution Detail */}
-          <div className="w-1/2">
+          <div className="lg:w-1/2 flex-1">
             {selectedSolution ? (
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">풀이 상세</h3>
-                <div className="space-y-4 overflow-y-auto max-h-[60vh]">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">풀이 상세</h3>
+                <div className="space-y-4 overflow-y-auto max-h-[30vh] lg:max-h-[60vh] pr-1">
                   {/* Question */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-800 mb-2">질문</h4>
-                    <p className="text-gray-700">{selectedSolution.question}</p>
+                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">질문</h4>
+                    <p className="text-gray-700 text-sm sm:text-base">{selectedSolution.question}</p>
+                    {selectedSolution.image_urls && selectedSolution.image_urls.length > 0 ? (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {selectedSolution.image_urls.map((src, index) => (
+                          <img
+                            key={`${selectedSolution.id}-img-${index}`}
+                            src={src}
+                            alt={`question-attachment-${index + 1}`}
+                            className="w-full rounded-lg object-cover"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Answer */}
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-800 mb-2">AI 답변</h4>
+                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">AI 답변</h4>
                     <div className="prose prose-sm max-w-none">
                       <MathRenderer text={selectedSolution.answer} />
                     </div>
@@ -145,8 +158,8 @@ export default function MyPage({ isOpen, onClose, userInfo }: MyPageProps) {
 
                   {/* Metadata */}
                   <div className="bg-gray-100 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-800 mb-2">풀이 정보</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">풀이 정보</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600">사용 모델:</span>
                         <span className="ml-2 font-medium">{selectedSolution.model_used}</span>

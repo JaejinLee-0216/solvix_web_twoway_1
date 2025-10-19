@@ -93,6 +93,7 @@ function Chatbox(
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationMode, setConversationMode] = useState(false);
+  const [sessionId, setSessionId] = useState<string>(generateId());
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTime, setLoadingTime] = useState(0);
   const [loadingInterval, setLoadingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -405,6 +406,7 @@ function Chatbox(
     form.append("text", trimmedText);
     form.append("model", model);
     form.append("style", style);
+    form.append("sessionId", sessionId);
     // Send conversation history for context
     form.append("conversation", JSON.stringify(messages));
     images.forEach((file) => {
@@ -539,6 +541,7 @@ function Chatbox(
     setMessages([]);
     setAbortController(null);
     resetImagesState();
+    setSessionId(generateId());
     
     // Reset hero state to show buttons again
     onReset?.();
@@ -795,9 +798,16 @@ function Chatbox(
                     <img src="/assets/desktop/logo_icon.png" alt="SOLVIX" className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 text-left">
+                <div className="flex flex-col gap-1 text-center items-center">
                   <p className="text-[11px] text-white/80">답변을 작성 중이에요...</p>
                   <p className="text-[10px] text-white/50">소요시간 {loadingTime}초 (평균 45초)</p>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="text-[10px] text-[#007ABE] underline"
+                  >
+                    취소
+                  </button>
                 </div>
               </div>
             </div>
@@ -910,14 +920,6 @@ function Chatbox(
             </div>
           </div>
         </div>
-
-        {isLoading ? (
-          <div className="mt-4 flex justify-center">
-            <button onClick={handleCancel} className={`${loadingCancelButtonClass} px-4 py-2 text-xs`}>
-              취소
-            </button>
-          </div>
-        ) : null}
 
         <LoginWarningPopup
           isOpen={showLoginWarning}
