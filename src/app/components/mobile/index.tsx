@@ -10,6 +10,8 @@ import AdminPanel from "../AdminPanel";
 
 export default function MobileLanding() {
   const CHATBOX_INITIAL_OFFSET = 160;
+  const CHATBOX_MIN_OFFSET = 48;
+  const KEYBOARD_SAFE_SPACE = 120;
   const DROPZONE_VERTICAL_OFFSET = 50;
   const chatboxRef = useRef<ChatboxHandle | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
@@ -82,10 +84,15 @@ export default function MobileLanding() {
 
       const keyboardHeight = window.innerHeight - viewport.height - viewport.offsetTop;
       const keyboardOpen = keyboardHeight > 0;
-      const dynamicOffset = keyboardOpen ? -keyboardHeight : 0;
+      const adjustedKeyboardHeight = keyboardOpen
+        ? Math.max(keyboardHeight - KEYBOARD_SAFE_SPACE, 0)
+        : 0;
+      const nextOffset = keyboardOpen
+        ? Math.max(CHATBOX_INITIAL_OFFSET - adjustedKeyboardHeight, CHATBOX_MIN_OFFSET)
+        : CHATBOX_INITIAL_OFFSET;
 
       setIsKeyboardVisible(keyboardOpen);
-      setChatboxOffsetY(CHATBOX_INITIAL_OFFSET + dynamicOffset);
+      setChatboxOffsetY(nextOffset);
     };
 
     updateOffset();
