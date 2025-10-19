@@ -21,6 +21,10 @@ type Props = {
   onImageAttached?: (attached: boolean) => void;
   offsetY?: number;
   controlsOffsetY?: number;
+  imageButtonOffsetY?: number;
+  modelButtonOffsetY?: number;
+  usageBlockOffsetY?: number;
+  sendButtonOffsetY?: number;
 };
 
 export type ChatboxHandle = {
@@ -68,6 +72,10 @@ function Chatbox(
     onImageAttached,
     offsetY = 0,
     controlsOffsetY = 0,
+    imageButtonOffsetY = 0,
+    modelButtonOffsetY = 0,
+    usageBlockOffsetY = 0,
+    sendButtonOffsetY = 0,
   }: Props,
   ref
 ) {
@@ -100,67 +108,34 @@ function Chatbox(
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const applyUsage = useCallback((usage: any) => {
-    setDaily((prev) => {
-    const usedCandidates = [usage?.usedToday, usage?.daily_count, usage?.used].filter(
-      (value): value is number => typeof value === "number" && Number.isFinite(value)
-    );
+    const usedPool = [usage?.usedToday, usage?.used, usage?.daily_count]
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    const used = usedPool.length > 0 ? Math.max(...usedPool, 0) : 0;
 
-      const incrementApplied = typeof usage?.incrementApplied === "number"
-        ? usage.incrementApplied
-        : typeof usage?.increment_applied === "number"
-          ? usage.increment_applied
-          : null;
+    const freePool = [usage?.freeDaily, usage?.free, usage?.totalAllowance]
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
 
-      const usedFromIncrement = incrementApplied && incrementApplied > 0 ? prev.used + incrementApplied : null;
-      const usedPool = [prev.used, ...usedCandidates];
-      if (typeof usedFromIncrement === "number") {
-        usedPool.push(usedFromIncrement);
-      }
-      const nextUsed = Math.max(...usedPool, 0);
+    const remainingFreeRaw = typeof usage?.remainingFree === "number"
+      ? usage.remainingFree
+      : typeof usage?.remaining_free === "number"
+        ? usage.remaining_free
+        : null;
 
-      const remainingFreeRaw = typeof usage?.remainingFree === "number"
-        ? usage.remainingFree
-        : typeof usage?.remaining_free === "number"
-          ? usage.remaining_free
-          : null;
+    let free = freePool.length > 0 ? Math.max(...freePool, 0) : 0;
+    if (remainingFreeRaw != null && Number.isFinite(remainingFreeRaw)) {
+      free = Math.max(used + Math.max(remainingFreeRaw, 0), 0);
+    }
 
-      const freeDailyRaw = typeof usage?.freeDaily === "number"
-        ? usage.freeDaily
-        : typeof usage?.free_daily === "number"
-          ? usage.free_daily
-          : null;
+    const bonusRaw = typeof usage?.bonusBalance === "number"
+      ? usage.bonusBalance
+      : typeof usage?.bonus_balance === "number"
+        ? usage.bonus_balance
+        : null;
+    const bonus = bonusRaw != null && Number.isFinite(bonusRaw) ? Math.max(bonusRaw, 0) : 0;
 
-      let nextFreeTotal = prev.free;
+    const unlimited = Boolean(usage?.unlimited ?? usage?.isUnlimited);
 
-      if (remainingFreeRaw != null && Number.isFinite(remainingFreeRaw)) {
-        nextFreeTotal = Math.max(nextUsed + Math.max(remainingFreeRaw, 0), 0);
-      } else if (freeDailyRaw != null && Number.isFinite(freeDailyRaw)) {
-        if (freeDailyRaw < nextUsed) {
-          nextFreeTotal = Math.max(nextUsed + Math.max(freeDailyRaw, 0), 0);
-        } else {
-          nextFreeTotal = Math.max(freeDailyRaw, 0);
-        }
-      } else if (prev.free === 0 && nextUsed > 0) {
-        nextFreeTotal = nextUsed;
-      }
-
-      const bonusRaw = typeof usage?.bonusBalance === "number"
-        ? usage.bonusBalance
-        : typeof usage?.bonus_balance === "number"
-          ? usage.bonus_balance
-          : null;
-
-      const nextBonus = bonusRaw != null && Number.isFinite(bonusRaw) ? Math.max(bonusRaw, 0) : prev.bonus;
-
-      const unlimited = Boolean(usage?.unlimited ?? usage?.isUnlimited ?? prev.unlimited);
-
-      return {
-        used: nextUsed,
-        free: nextFreeTotal,
-        bonus: nextBonus,
-        unlimited,
-      };
-    });
+    setDaily({ used, free, bonus, unlimited });
   }, []);
 
   const fetchUsage = useCallback(async () => {
@@ -413,7 +388,9 @@ function Chatbox(
       return;
     }
 
-    const totalAllowance = daily.unlimited ? Number.POSITIVE_INFINITY : daily.free + daily.bonus;
+    const totalAllowance = daily.unlimited
+      ? Number.POSITIVE_INFINITY
+      : Math.max(daily.free + daily.bonus, daily.used);
     if (!daily.unlimited && daily.used >= totalAllowance) {
       alert("일일 질문 횟수를 초과했습니다. 내일 다시 시도하거나 플랜을 업그레이드하세요.");
       return;
@@ -689,15 +666,12 @@ function Chatbox(
     : "absolute top-[4px] right-[4px] p-1 text-white/70 hover:text-white cursor-pointer";
 
   const wrapperClasses = isMobile ? "relative" : "";
-  const bubbleStyles = isMobile
-    ? { user: "bg-[#E9F3FF] text-[#0A1625]", assistant: "bg-white text-[#111] border border-[#E1E6F0]" }
-    : { user: "bg-[#262626]", assistant: "bg-[#141414] border border-white/10" };
   const bubbleBaseClasses = isMobile ? "px-3 py-2 rounded-[12px]" : "px-4 py-3 rounded-[10px]";
   const messageOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[90%]";
   const loadingOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[80%]";
   const messageTextClass = isMobile ? "text-[11px] leading-[1.6] whitespace-pre-wrap" : "text-sm whitespace-pre-wrap";
   const copyButtonClass = isMobile
-    ? "inline-flex items-center gap-1 text-xs text-[#0075DC] hover:text-[#005bb5] transition-colors"
+    ? "inline-flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
     : "inline-flex items-center gap-1 text-xs text-blue-300 hover:text-white transition-colors";
   const copyToastClass = isMobile
     ? "absolute -top-7 right-0 px-2 py-1 text-[11px] rounded bg-[#0075DC] text-white shadow animate-fade-in-out"
@@ -712,21 +686,20 @@ function Chatbox(
   const loadingHistoryClasses = isMobile
     ? "flex-1 overflow-y-auto flex flex-col gap-4 w-full"
     : "flex flex-col gap-4 p-4 h-full overflow-y-auto";
-  const loadingContainerClasses = isMobile
-    ? "flex flex-col items-center justify-center mt-6"
-    : "flex flex-col items-center justify-center mt-4";
-  const loadingTextClass = isMobile ? "text-white text-base mb-2" : "text-white text-lg mb-2";
-  const loadingTimeClass = isMobile ? "text-gray-200 text-sm mb-4" : "text-gray-300 text-sm mb-4";
-  const loadingCancelButtonClass = isMobile
-    ? "bg-[#007ABE] hover:bg-[#006599] text-white px-5 py-2 rounded-lg transition-colors"
-    : "bg-[#007ABE] hover:bg-[#006599] text-white px-6 py-2 rounded-lg transition-colors";
-  const spinnerWrapperClass = isMobile ? "flex space-x-1 mb-4" : "flex space-x-1 mb-4";
-  const spinnerDotStyle = isMobile ? "w-2 h-2 bg-white rounded-full animate-bounce" : "w-2 h-2 bg-white rounded-full animate-bounce";
+  const loadingCancelButtonClass = "bg-[#007ABE] hover:bg-[#006599] text-white rounded-lg transition-colors";
   const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
   const wrapperStyle = offsetY !== 0 ? { transform: `translateY(${offsetY}px)` } : undefined;
-  const controlsOffsetStyle = isMobile && controlsOffsetY !== 0 ? { transform: `translateY(${controlsOffsetY}px)` } : undefined;
+  const controlsOffsetStyle = isMobile && !isLoading && controlsOffsetY !== 0 ? { transform: `translateY(${controlsOffsetY}px)` } : undefined;
+  const imageAttachmentOffsetStyle = imageButtonOffsetY !== 0 ? { transform: `translateY(${imageButtonOffsetY}px)` } : undefined;
+  const modelSelectOffsetStyle = modelButtonOffsetY !== 0 ? { transform: `translateY(${modelButtonOffsetY}px)` } : undefined;
+  const usageBlockOffsetStyle = usageBlockOffsetY !== 0 ? { transform: `translateY(${usageBlockOffsetY}px)` } : undefined;
+  const sendButtonOffsetStyle = sendButtonOffsetY !== 0 ? { transform: `translateY(${sendButtonOffsetY}px)` } : undefined;
+  const mobileImageButtonStyle = isMobile ? imageAttachmentOffsetStyle : undefined;
+  const mobileModelButtonStyle = isMobile ? modelSelectOffsetStyle : undefined;
+  const mobileUsageBlockStyle = isMobile ? usageBlockOffsetStyle : undefined;
+  const mobileSendButtonStyle = isMobile ? sendButtonOffsetStyle : undefined;
 
-  const totalAllowance = daily.unlimited ? Infinity : daily.free + daily.bonus;
+  const totalAllowance = daily.unlimited ? Infinity : Math.max(daily.free + daily.bonus, daily.used);
 
   const extractMessageImages = (msg: Message): string[] => {
     if (Array.isArray(msg.images) && msg.images.length > 0) {
@@ -739,21 +712,34 @@ function Chatbox(
   };
 
   if (isMobile) {
-    const mobileMessages = messages.map((m, i) => (
-      <div key={m.id ?? i} className={m.role === "user" ? "text-right" : "text-left"}>
-        <div className={messageOuterClass}>
-          <div className={`${bubbleBaseClasses} ${m.role === "user" ? bubbleStyles.user : bubbleStyles.assistant}`}>
-            {extractMessageImages(m).length > 0 ? (
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                {extractMessageImages(m).map((imgSrc, idx) => (
-                  <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-full max-h-[150px] object-contain rounded" />
-                ))}
+
+    const renderMobileMessages = () => (
+      <>
+        {messages.map((m, i) => (
+          <div key={m.id ?? i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+            {m.role === "user" ? (
+              <div className="relative inline-block bg-[#3A404F] text-white px-3 py-2 rounded-[14px] max-w-[82%]">
+                {extractMessageImages(m).length > 0 ? (
+                  <div className="mb-2 grid grid-cols-2 gap-2">
+                    {extractMessageImages(m).map((imgSrc, idx) => (
+                      <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-full max-h-[150px] object-contain rounded" />
+                    ))}
+                  </div>
+                ) : null}
+                <MathRenderer text={m.text} className={messageTextClass} colorScheme="dark" />
+                <span className="absolute top-1/2 right-[-6px] -translate-y-1/2 w-3 h-3 bg-[#3A404F] rotate-45 rounded-[2px]"></span>
               </div>
-            ) : null}
-            <MathRenderer text={m.text} className={messageTextClass} />
-            {m.role === "assistant" ? (
-              <>
-                <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
+            ) : (
+              <div className="inline-block max-w-[90%] text-white space-y-2">
+                {extractMessageImages(m).length > 0 ? (
+                  <div className="mb-2 grid grid-cols-2 gap-2">
+                    {extractMessageImages(m).map((imgSrc, idx) => (
+                      <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-full max-h-[150px] object-contain rounded" />
+                    ))}
+                  </div>
+                ) : null}
+                <MathRenderer text={m.text} className={messageTextClass} colorScheme="dark" />
+                <div className="flex justify-end items-center gap-2 text-right relative">
                   {copiedMessageId === m.id ? <span className={copyToastClass}>복사가 완료되었습니다!</span> : null}
                   <button onClick={() => handleCopy(m.text, m.id)} className={copyButtonClass}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -763,20 +749,20 @@ function Chatbox(
                     복사
                   </button>
                 </div>
-                <div className="mt-2">
+                <div className="flex flex-col gap-2">
                   {isVisualizing && visualizingMessageIndex === i ? (
-                    <div className="flex items-center gap-2 text-xs text-blue-600">
+                    <div className="flex items-center gap-2 text-xs text-blue-400">
                       <div className="flex space-x-1">
-                        <div className={spinnerDotStyle}></div>
-                        <div className={spinnerDotStyle} style={{ animationDelay: "0.1s" }}></div>
-                        <div className={spinnerDotStyle} style={{ animationDelay: "0.2s" }}></div>
+                        <div className="w-2 h-2 bg-[#4CB4FF] rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-[#4CB4FF] rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                        <div className="w-2 h-2 bg-[#4CB4FF] rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
                       </div>
                       <span>시각화 중... {visualizingTime}초</span>
                     </div>
                   ) : !m.showVisualization ? (
                     <button
                       onClick={() => handleVisualize(i)}
-                      className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+                      className="self-start text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded transition-colors flex items-center gap-1"
                       disabled={isVisualizing}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -794,16 +780,29 @@ function Chatbox(
                     </div>
                   ) : null}
                 </div>
-              </>
-            ) : null}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    ));
-
-    const renderMobileMessages = () => (
-      <>
-        {mobileMessages}
+        ))}
+        {isLoading ? (
+          <div className="flex justify-start">
+            <div className={loadingOuterClass}>
+              <div className="px-3 py-3 rounded-[14px] bg-[#0B0F18]/80 border border-white/10 inline-flex items-center gap-3">
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border border-white/20" />
+                  <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-[#4CB4FF] border-l-[#4CB4FF]/40 animate-spin" />
+                  <div className="relative flex items-center justify-center w-6 h-6 rounded-full bg-[#0A1625] shadow-[0_0_10px_rgba(76,180,255,0.35)]">
+                    <img src="/assets/desktop/logo_icon.png" alt="SOLVIX" className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 text-left">
+                  <p className="text-[11px] text-white/80">답변을 작성 중이에요...</p>
+                  <p className="text-[10px] text-white/50">소요시간 {loadingTime}초 (평균 45초)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
         <div ref={messagesEndRef} />
       </>
     );
@@ -824,8 +823,14 @@ function Chatbox(
             </div>
           ) : null}
 
-          {conversationMode ? (
-            <div ref={mobileWrapperRef} className="p-4 max-h-[360px] overflow-y-auto space-y-4">
+          {conversationMode || messages.length > 0 || isLoading ? (
+            <div ref={mobileWrapperRef} className="px-4 pt-4 max-h-[360px] overflow-y-auto space-y-4">
+              {messages.length === 0 && !isLoading ? (
+                <div className="flex flex-col gap-3 text-left text-white/70 text-[12px] leading-relaxed">
+                  <p>안녕하세요! SOLVIX가 준비되어 있어요.</p>
+                  <p>문제를 업로드하거나 궁금한 내용을 입력하면 바로 도와드릴게요.</p>
+                </div>
+              ) : null}
               {renderMobileMessages()}
             </div>
           ) : null}
@@ -850,6 +855,7 @@ function Chatbox(
                   onClick={handleImagePick}
                   aria-label={`이미지 첨부 (${imagePreviews.length}/${MAX_IMAGES})`}
                   className="cursor-pointer"
+                  style={mobileImageButtonStyle}
                 >
                   <img src={getAttachmentIndicatorSrc(imagePreviews.length)} alt="이미지 첨부" width={62} height={34} />
                 </button>
@@ -858,10 +864,10 @@ function Chatbox(
                   <button
                     onClick={() => {
                       setShowModelDropdown(!showModelDropdown);
-                      setShowStyleDropdown(false);
                     }}
                     aria-label="모델 선택"
                     className="cursor-pointer"
+                    style={mobileModelButtonStyle}
                   >
                     <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={110} height={30} />
                   </button>
@@ -888,7 +894,7 @@ function Chatbox(
               </div>
 
               <div className="flex flex-col items-center gap-2">
-                <div className="flex flex-col items-center leading-tight">
+                <div className="flex flex-col items-center leading-tight" style={mobileUsageBlockStyle}>
                   <span className={`${dailyUsageClasses} whitespace-nowrap text-center`}>오늘 이용</span>
                   <span className="text-[11px] font-semibold text-[#0A1625] whitespace-nowrap text-center">
                     {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free + daily.bonus}`}
@@ -897,7 +903,7 @@ function Chatbox(
                     <span className="text-[8px] text-[#3A4A65] mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
                   ) : null}
                 </div>
-                <button onClick={handleSubmit} className={sendButtonClasses}>
+                <button onClick={handleSubmit} className={sendButtonClasses} style={mobileSendButtonStyle}>
                   <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
                 </button>
               </div>
@@ -906,21 +912,10 @@ function Chatbox(
         </div>
 
         {isLoading ? (
-          <div className={loadingOverlayClasses}>
-            <div className={loadingHistoryClasses}>{renderMobileMessages()}</div>
-            <div className={loadingContainerClasses}>
-              <div className={spinnerWrapperClass}>
-                <div className={spinnerDotStyle}></div>
-                <div className={spinnerDotStyle} style={{ animationDelay: "0.1s" }}></div>
-                <div className={spinnerDotStyle} style={{ animationDelay: "0.2s" }}></div>
-              </div>
-              <p className={loadingTextClass}>답변을 작성 중이에요...</p>
-              <p className="text-gray-200 text-xs mb-1">평균 45초 소요</p>
-              <p className={loadingTimeClass}>소요시간 {loadingTime}초</p>
-              <button onClick={handleCancel} className={loadingCancelButtonClass}>
-                취소
-              </button>
-            </div>
+          <div className="mt-4 flex justify-center">
+            <button onClick={handleCancel} className={`${loadingCancelButtonClass} px-4 py-2 text-xs`}>
+              취소
+            </button>
           </div>
         ) : null}
 
@@ -981,6 +976,7 @@ function Chatbox(
               onClick={handleImagePick}
               aria-label={`이미지 첨부 (${imagePreviews.length}/${MAX_IMAGES})`}
               className="cursor-pointer"
+              style={imageAttachmentOffsetStyle}
             >
               <img
                 src={getAttachmentIndicatorSrc(imagePreviews.length)}
@@ -995,10 +991,10 @@ function Chatbox(
               <button
                 onClick={() => {
                   setShowModelDropdown(!showModelDropdown);
-                  setShowStyleDropdown(false);
                 }} 
                 aria-label="모델 선택" 
                 className="cursor-pointer"
+                style={modelSelectOffsetStyle}
               >
                 <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={isMobile ? 110 : 130} height={isMobile ? 30 : 34} />
               </button>
@@ -1027,10 +1023,10 @@ function Chatbox(
             
           </div>
           <div className="flex items-center gap-4">
-            <div className={dailyUsageClasses}>
+            <div className={dailyUsageClasses} style={usageBlockOffsetStyle}>
               오늘 이용 {daily.unlimited ? `무제한 (${daily.used}회 사용)` : `${daily.used}/${daily.free + daily.bonus}`}
             </div>
-            <button onClick={handleSubmit} className={sendButtonClasses}>
+            <button onClick={handleSubmit} className={sendButtonClasses} style={sendButtonOffsetStyle}>
               <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={isMobile ? 30 : 42} height={isMobile ? 30 : 42} />
             </button>
           </div>

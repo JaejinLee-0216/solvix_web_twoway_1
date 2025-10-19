@@ -273,6 +273,11 @@ export default function MobileLanding() {
               setDropzoneOffsetY(DROPZONE_VERTICAL_OFFSET);
             }}
             offsetY={chatboxOffsetY}
+            controlsOffsetY={20}
+            imageButtonOffsetY={10}
+            modelButtonOffsetY={13}
+            usageBlockOffsetY={-20}
+            sendButtonOffsetY={-10}
           />
         </section>
       </main>
@@ -295,7 +300,7 @@ export default function MobileLanding() {
               </div>
               <button onClick={() => closeMenu()} className="h-8 w-8 flex items-center justify-center text-white hover:text-white/80" aria-label="메뉴 닫기">
                 <span className="material-symbols-rounded text-[20px]">close</span>
-              </button>
+            </button>
           </div>
 
             <div className="space-y-3 text-sm font-medium">
