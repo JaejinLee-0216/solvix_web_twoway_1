@@ -30,6 +30,7 @@ export default function MobileLanding() {
   const [menuClosing, setMenuClosing] = useState(false);
   const menuHideTimeoutRef = useRef<number | null>(null);
   const [infoPopup, setInfoPopup] = useState<"performance" | "testimonials" | "pricing" | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const syncLoginState = useCallback((info: any | null) => {
     if (info) {
@@ -72,12 +73,18 @@ export default function MobileLanding() {
 
     const updateOffset = () => {
       const viewport = window.visualViewport;
+
       if (!viewport) {
+        setIsKeyboardVisible(false);
         setChatboxOffsetY(CHATBOX_INITIAL_OFFSET);
         return;
       }
+
       const keyboardHeight = window.innerHeight - viewport.height - viewport.offsetTop;
-      const dynamicOffset = keyboardHeight > 0 ? -keyboardHeight : 0;
+      const keyboardOpen = keyboardHeight > 0;
+      const dynamicOffset = keyboardOpen ? -keyboardHeight : 0;
+
+      setIsKeyboardVisible(keyboardOpen);
       setChatboxOffsetY(CHATBOX_INITIAL_OFFSET + dynamicOffset);
     };
 
@@ -236,7 +243,7 @@ export default function MobileLanding() {
           <p className="text-[11px] text-white/70"> 풀이 한 장만 올려봐요. 나머진 SOLVIX가 도와줄게요.</p>
         </section>
 
-        {!hasConversationStarted ? (
+        {!hasConversationStarted && !isKeyboardVisible ? (
           <section style={dropzoneOffsetY !== 0 ? { transform: `translateY(${dropzoneOffsetY}px)` } : undefined}>
             <div
               ref={dropRef}

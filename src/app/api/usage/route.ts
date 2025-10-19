@@ -8,18 +8,25 @@ type UsageRow = {
   unlimited: boolean;
   limit_reached?: boolean;
   increment_applied?: number;
+  total_questions_used?: number;
+  total_used_today?: number;
 };
 
-function mapUsage(row: UsageRow) {
-  const used = row.used_today ?? 0;
+function mapUsage(row: UsageRow, totalUsedOverride?: number) {
+  const planUsed = row.used_today ?? 0;
   const free = row.free_daily ?? 0;
   const bonus = row.bonus_balance ?? 0;
   const unlimited = Boolean(row.unlimited);
-  const remainingFree = Math.max(free - used, 0);
+  const remainingFree = Math.max(free - planUsed, 0);
+  const rawTotal = totalUsedOverride ?? row.total_used_today ?? row.total_questions_used;
+  const totalUsed = typeof rawTotal === "number" && Number.isFinite(rawTotal)
+    ? Math.max(rawTotal, planUsed, 0)
+    : Math.max(planUsed, 0);
   const remainingTotal = unlimited ? Number.POSITIVE_INFINITY : remainingFree + bonus;
 
   return {
-    usedToday: used,
+    usedToday: totalUsed,
+    planUsedToday: planUsed,
     freeDaily: free,
     bonusBalance: bonus,
     unlimited,
@@ -46,6 +53,29 @@ async function resolveUserId(userInfo: any) {
   }
 
   return userRecord.id as string;
+}
+
+async function fetchTotalQuestionsUsedToday(userId: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("user_usage")
+      .select("total_questions_used")
+      .eq("user_id", userId)
+      .eq("usage_date", today)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Supabase total_questions_used lookup error", error);
+      return null;
+    }
+
+    const total = data?.total_questions_used;
+    return typeof total === "number" && Number.isFinite(total) ? total : null;
+  } catch (error) {
+    console.error("Supabase total_questions_used lookup exception", error);
+    return null;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -77,7 +107,15 @@ export async function GET(request: NextRequest) {
       unlimited: false,
     };
 
-    const usage = mapUsage(row as UsageRow);
+    let totalUsedOverride: number | null = null;
+    const inlineTotal = (row as any)?.total_used_today ?? (row as any)?.total_questions_used;
+    if (typeof inlineTotal === "number" && Number.isFinite(inlineTotal)) {
+      totalUsedOverride = inlineTotal;
+    } else {
+      totalUsedOverride = await fetchTotalQuestionsUsedToday(userId);
+    }
+
+    const usage = mapUsage(row as UsageRow, totalUsedOverride ?? undefined);
 
     return NextResponse.json({ success: true, usage });
   } catch (error) {
@@ -118,7 +156,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No usage data returned" }, { status: 500 });
     }
 
-    const usage = mapUsage(row as UsageRow);
+    let totalUsedOverride: number | null = null;
+    const inlineTotal = (row as any)?.total_used_today ?? (row as any)?.total_questions_used;
+    if (typeof inlineTotal === "number" && Number.isFinite(inlineTotal)) {
+      totalUsedOverride = inlineTotal;
+    } else {
+      totalUsedOverride = await fetchTotalQuestionsUsedToday(userId);
+    }
+
+    const usage = mapUsage(row as UsageRow, totalUsedOverride ?? undefined);
 
     if (usage.limitReached && usage.incrementApplied === 0) {
       return NextResponse.json(
