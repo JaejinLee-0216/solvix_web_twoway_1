@@ -3,14 +3,15 @@ import { VertexAI } from "@google-cloud/vertexai";
 import { readFileSync } from "fs";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
-const DEFAULT_TUTOR_PROMPT = `역할: 너는 고등학생들의 수능 수학 문제를 함께 풀어주는 친근한 대학생 멘토 AI야. 너의 목표는 정답을 알려주는 것이 아니라, 학생이 스스로 생각의 벽을 넘을 수 있도록 돕는 페이스메이커야. 딱딱한 AI가 아니라, 재치 있고 다정한 과외 선생님처럼 행동해 줘.
+const DEFAULT_TUTOR_PROMPT = `역할: 너는 수능 수학 문제를 함께 풀어주는 과외 선생님이야. 너의 목표는 정답을 알려주는 것이 아니라, 학생이 스스로 생각의 벽을 넘을 수 있도록 돕는 페이스메이커야.
 
-- 설명 원칙(Core Principles):
-1. 생각의 흐름을 따라가는 대화: 절대 결론부터 말하거나 해설지처럼 설명하지 마. 학생의 풀이를 보고 "음, 여기까지는 정말 잘 왔는데, 여기서부터 길이 두 갈래로 나뉘네. 어느 쪽으로 가야 할까?" 와 같이 학생의 생각 과정을 따라가며 대화해 줘. 항상 "왜 그렇게 될까?", "그 다음엔 뭘 확인해야 할까?" 같은 질문을 던져서 학생이 스스로 답을 찾도록 유도해야 해.
-2. 실수에 대한 깊은 공감과 긍정적 재구성: 학생의 실수를 '오류'나 '틀린 부분'으로 진단하지 마. 대신 "아, 바로 이 부분! 여기 진짜 많은 학생들이 '앗, 낚였다!' 하고 외치는 함정 카드 같은 곳이야." 또는 "나도 처음엔 그랬어." 와 같이, 실수가 당연하고 흔한 것임을 알려주며 학생의 마음을 먼저 안심시켜 줘.
+- 설명 원칙:
+1. 생각의 흐름을 따라가는 대화: 절대 결론부터 말하지 마. 학생의 풀이를 보고 "음, 여기까지는 정말 잘 왔는데, 여기서부터 길이 두 갈래로 나뉘네. 어느 쪽으로 가야 할까?" 와 같이 학생의 생각 과정을 따라가며 대화해 줘. 항상 "왜 그렇게 될까?", "그 다음엔 뭘 확인해야 할까?" 같은 질문을 던져서 학생이 스스로 답을 찾도록 유도해야 해.
+2. 자연스러운 리액션 (과한 칭찬 금지): - "핵심을 찔렀어", "정말 대단해" 같은 과장되고 인위적인 칭찬은 절대 금지. - 대신, 학생의 말이 맞으면 "오, 그거지", "맞아", "좋아, 거기까지"처럼 자연스럽게 인정하고 바로 다음 질문으로 연결해. - 학생이 막히면 "음... 힌트를 좀 줄까?", "아니면 다른 방향으로 생각해 볼까?"라고 제안해.
 
 
-출력 형식 지침
+- 출력 형식 지침
+실제 카톡 대화처럼 한 턴(turn)에 한두 문장의 짧은 메시지를 보내야 해. 학생과 대화를 여러 번 주고받는(ping-pong) 게 목표야.
 1. 짧은 호흡으로 대화하기: 답변을 한두 문장의 짧은 문단 여러 개로 나누어, 마치 메신저로 대화하듯 말해. 한 번의 답변(문단)에는 하나의 핵심 아이디어나 질문만 담아서, 대화가 자연스럽게 이어지도록 해 줘.
 2. 구체적인 채팅 스타일 예시:
 "음... '원과 직선 사이에서 가장 특수한 상태'가 뭘까?"
@@ -96,33 +97,33 @@ const persistConversation = async (
   }
 
   try {
-    const payload: Array<Record<string, unknown>> = [];
+  const payload: Array<Record<string, unknown>> = [];
 
+  payload.push({
+    user_id: userId,
+    session_id: params.sessionId,
+    message_type: "user",
+    message_content: params.question,
+    image_url: params.images.length > 0
+      ? JSON.stringify(params.images.map((item) => item.dataUrl))
+      : null,
+    model_used: params.model,
+    style_used: params.style,
+  });
+
+  if (params.answer) {
     payload.push({
       user_id: userId,
       session_id: params.sessionId,
-      message_type: "user",
-      message_content: params.question,
-      image_url: params.images.length > 0
-        ? JSON.stringify(params.images.map((item) => item.dataUrl))
-        : null,
+      message_type: "assistant",
+      message_content: params.answer,
+      image_url: null,
       model_used: params.model,
       style_used: params.style,
     });
+  }
 
-    if (params.answer) {
-      payload.push({
-        user_id: userId,
-        session_id: params.sessionId,
-        message_type: "assistant",
-        message_content: params.answer,
-        image_url: null,
-        model_used: params.model,
-        style_used: params.style,
-      });
-    }
-
-    await supabaseAdmin.from("user_conversations").insert(payload);
+  await supabaseAdmin.from("user_conversations").insert(payload);
   } catch (error) {
     console.error("Failed to persist conversation:", error);
   }

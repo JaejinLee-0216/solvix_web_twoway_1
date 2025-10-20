@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Chatbox, { ChatboxHandle } from "../Chatbox";
 import KakaoLoginPopup from "../KakaoLoginPopup";
 import PaymentPopup from "../PaymentPopup";
@@ -10,9 +11,13 @@ import AdminPanel from "../AdminPanel";
 
 export default function MobileLanding() {
   const CHATBOX_INITIAL_OFFSET = 160;
+  const CHATBOX_ACTIVE_OFFSET = 90;
   const CHATBOX_MIN_OFFSET = 48;
   const KEYBOARD_SAFE_SPACE = 120;
   const DROPZONE_VERTICAL_OFFSET = 50;
+  const CONVERSATION_INITIAL_OFFSET = -150;
+  const CONVERSATION_ACTIVE_OFFSET = -100;
+  const router = useRouter();
   const chatboxRef = useRef<ChatboxHandle | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -23,7 +28,9 @@ export default function MobileLanding() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [imageAttached, setImageAttached] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
+  const [chatboxBaseOffset, setChatboxBaseOffset] = useState(CHATBOX_INITIAL_OFFSET);
   const [chatboxOffsetY, setChatboxOffsetY] = useState(CHATBOX_INITIAL_OFFSET);
+  const [conversationOffsetY, setConversationOffsetY] = useState(CONVERSATION_INITIAL_OFFSET);
   const [dropzoneOffsetY, setDropzoneOffsetY] = useState(DROPZONE_VERTICAL_OFFSET);
   const [paymentPopup, setPaymentPopup] = useState<{ isOpen: boolean; planType: "basic" | "pro" | "ultra" }>(
     { isOpen: false, planType: "basic" }
@@ -78,7 +85,7 @@ export default function MobileLanding() {
 
       if (!viewport) {
         setIsKeyboardVisible(false);
-        setChatboxOffsetY(CHATBOX_INITIAL_OFFSET);
+        setChatboxOffsetY(chatboxBaseOffset);
         return;
       }
 
@@ -88,8 +95,8 @@ export default function MobileLanding() {
         ? Math.max(keyboardHeight - KEYBOARD_SAFE_SPACE, 0)
         : 0;
       const nextOffset = keyboardOpen
-        ? Math.max(CHATBOX_INITIAL_OFFSET - adjustedKeyboardHeight, CHATBOX_MIN_OFFSET)
-        : CHATBOX_INITIAL_OFFSET;
+        ? Math.max(chatboxBaseOffset - adjustedKeyboardHeight, CHATBOX_MIN_OFFSET)
+        : chatboxBaseOffset;
 
       setIsKeyboardVisible(keyboardOpen);
       setChatboxOffsetY(nextOffset);
@@ -113,7 +120,7 @@ export default function MobileLanding() {
         window.removeEventListener("resize", updateOffset);
       }
     };
-  }, [CHATBOX_INITIAL_OFFSET]);
+  }, [CHATBOX_MIN_OFFSET, KEYBOARD_SAFE_SPACE, chatboxBaseOffset]);
 
   const handleLoginClick = () => {
     if (isLoggedIn) {
@@ -218,10 +225,31 @@ export default function MobileLanding() {
     };
   }, []);
 
+  const handleLogoClick = () => {
+    clearMenuHideTimer();
+    setMenuOpen(false);
+    setMenuClosing(false);
+    setInfoPopup(null);
+    setShowLoginPopup(false);
+    setShowMyPage(false);
+    setShowAdminPanel(false);
+    setPaymentPopup({ isOpen: false, planType: "basic" });
+    chatboxRef.current?.resetConversation?.();
+    setChatboxOffsetY(CHATBOX_INITIAL_OFFSET);
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#03050A] text-white font-[var(--font-sans)]">
       <header className="px-4 pt-6 pb-5 flex items-center justify-between">
-        <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={108} height={28} priority />
+        <button
+          type="button"
+          onClick={handleLogoClick}
+          className="flex items-center cursor-pointer"
+          aria-label="홈으로 이동"
+        >
+          <Image src="/assets/desktop/nav_logo.png" alt="SOLVIX" width={108} height={28} priority />
+        </button>
         <div className="flex items-center gap-2 text-[10px] text-white/70">
           {isLoggedIn ? (
             <span className="bg-white/10 px-2 py-1 rounded-full">
@@ -245,10 +273,12 @@ export default function MobileLanding() {
       </header>
 
       <main className="px-4 pb-16 space-y-0">
-        <section className="text-center space-y-2">
-          <h1 className="text-[26px] font-semibold leading-tight"> 막혔어? 올려봐!</h1>
-          <p className="text-[11px] text-white/70"> 풀이 한 장만 올려봐요. 나머진 SOLVIX가 도와줄게요.</p>
-        </section>
+        {!hasConversationStarted ? (
+          <section className="text-center space-y-2">
+            <h1 className="text-[26px] font-semibold leading-tight"> 막혔어? 올려봐!</h1>
+            <p className="text-[11px] text-white/70"> 풀이 한 장만 올려봐요. 나머진 SOLVIX가 도와줄게요.</p>
+          </section>
+        ) : null}
 
         {!hasConversationStarted && !isKeyboardVisible ? (
           <section style={dropzoneOffsetY !== 0 ? { transform: `translateY(${dropzoneOffsetY}px)` } : undefined}>
@@ -280,11 +310,19 @@ export default function MobileLanding() {
             isLoggedIn={isLoggedIn}
             onLoginRequest={() => setShowLoginPopup(true)}
             onImageAttached={setImageAttached}
-            onStartConversation={() => setHasConversationStarted(true)}
+            onStartConversation={() => {
+              setHasConversationStarted(true);
+              setChatboxBaseOffset(CHATBOX_ACTIVE_OFFSET);
+              setChatboxOffsetY(CHATBOX_ACTIVE_OFFSET);
+              setConversationOffsetY(CONVERSATION_ACTIVE_OFFSET);
+            }}
             onReset={() => {
               setImageAttached(false);
               setHasConversationStarted(false);
               setDropzoneOffsetY(DROPZONE_VERTICAL_OFFSET);
+              setChatboxBaseOffset(CHATBOX_INITIAL_OFFSET);
+              setChatboxOffsetY(CHATBOX_INITIAL_OFFSET);
+              setConversationOffsetY(CONVERSATION_INITIAL_OFFSET);
             }}
             offsetY={chatboxOffsetY}
             controlsOffsetY={20}
@@ -292,6 +330,7 @@ export default function MobileLanding() {
             modelButtonOffsetY={13}
             usageBlockOffsetY={-20}
             sendButtonOffsetY={-10}
+            conversationOffsetY={conversationOffsetY}
           />
         </section>
       </main>
@@ -537,7 +576,17 @@ export default function MobileLanding() {
         planType={paymentPopup.planType}
       />
 
-      <MyPage isOpen={showMyPage} onClose={() => setShowMyPage(false)} userInfo={userInfo} />
+      <MyPage
+        isOpen={showMyPage}
+        onClose={() => setShowMyPage(false)}
+        userInfo={userInfo}
+        onResumeSession={(sessionId) => {
+          setShowMyPage(false);
+          setHasConversationStarted(true);
+          chatboxRef.current?.resetConversation();
+          chatboxRef.current?.loadConversation?.(sessionId);
+        }}
+      />
       <AdminPanel
         isOpen={showAdminPanel}
         onClose={() => setShowAdminPanel(false)}

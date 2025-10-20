@@ -25,12 +25,15 @@ type Props = {
   modelButtonOffsetY?: number;
   usageBlockOffsetY?: number;
   sendButtonOffsetY?: number;
+  conversationOffsetY?: number;
 };
 
 export type ChatboxHandle = {
   attachImage: (file: File) => void;
   attachImages: (files: FileList | File[]) => void;
   focusInput: () => void;
+  resetConversation: () => void;
+  loadConversation?: (sessionId: string) => Promise<void>;
 };
 
 type Message = {
@@ -51,6 +54,8 @@ const generateId = () => {
 };
 
 const MAX_IMAGES = 5;
+const SOLVIX_MAIN_MODEL = "SOLVIX 1.0";
+const SOLVIX_LITE_MODEL = "SOLVIX 1.0 LITE";
 
 const getAttachmentIndicatorSrc = (count: number) => {
   const clamped = Math.min(Math.max(count, 0), MAX_IMAGES);
@@ -76,11 +81,12 @@ function Chatbox(
     modelButtonOffsetY = 0,
     usageBlockOffsetY = 0,
     sendButtonOffsetY = 0,
+    conversationOffsetY = 0,
   }: Props,
   ref
 ) {
   const [text, setText] = useState("");
-  const [model, setModel] = useState("SOLVIX 1.0");
+  const [model, setModel] = useState(SOLVIX_MAIN_MODEL);
   const style = "해설지";
   const [daily, setDaily] = useState({ used: 0, free: 0, bonus: 0, unlimited: false });
   const [dailyLoading, setDailyLoading] = useState(false);
@@ -212,6 +218,27 @@ function Chatbox(
     }
   }, []);
 
+  const clearConversationState = useCallback((options?: { notifyParent?: boolean; sessionId?: string }) => {
+    setIsLoading(false);
+    setLoadingTime(0);
+    setConversationMode(false);
+    setMessages([]);
+    setAbortController(null);
+    resetImagesState();
+    setIsVisualizing(false);
+    setVisualizingTime(0);
+    setVisualizingMessageIndex(null);
+    setCopiedMessageId(null);
+    setSessionId(options?.sessionId ?? generateId());
+    if (options?.notifyParent) {
+      onReset?.();
+    }
+  }, [onReset, resetImagesState]);
+
+  const resetConversationState = useCallback(() => {
+    clearConversationState({ notifyParent: true });
+  }, [clearConversationState]);
+
   const applyImageFiles = useCallback((incomingFiles: FileList | File[]) => {
     const filesArray = Array.from(incomingFiles).filter((item): item is File =>
       item instanceof File && item.size > 0
@@ -259,7 +286,40 @@ function Chatbox(
         textareaRef.current.setSelectionRange(value.length, value.length);
       }
     },
-  }), [applyImageFiles]);
+    resetConversation: resetConversationState,
+    loadConversation: async (sessionId: string) => {
+      if (!sessionId || sessionId.length === 0) {
+        alert('대화 세션 정보를 찾을 수 없습니다.');
+        return Promise.reject(new Error('Invalid session id'));
+      }
+
+      clearConversationState({ notifyParent: false, sessionId });
+
+      try {
+        const res = await fetch(`/api/mypage/conversations/${sessionId}`, { credentials: 'include' });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch conversation (${res.status})`);
+        }
+        const data = await res.json();
+        const history = Array.isArray(data?.messages) ? data.messages : [];
+        const mapped = history.map((entry: any, index: number) => ({
+          id: entry.id ?? `restored-${index}`,
+          role: entry.role === 'assistant' ? 'assistant' : 'user',
+          text: typeof entry.text === 'string' ? entry.text : '',
+          images: Array.isArray(entry.images) ? entry.images.filter((img: unknown) => typeof img === 'string') : [],
+          showVisualization: Boolean(entry.visualization),
+          visualization: entry.visualization ?? null,
+        }));
+        setMessages(mapped);
+        setConversationMode(true);
+        onStartConversation?.();
+      } catch (error) {
+        console.error('Failed to load conversation history:', error);
+        alert('대화 내역을 불러올 수 없습니다. 다시 시도해 주세요.');
+        throw error;
+      }
+    },
+  }), [applyImageFiles, clearConversationState, onStartConversation]);
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -413,7 +473,11 @@ function Chatbox(
       form.append("images", file);
     });
     const useGenAi = (process.env.NEXT_PUBLIC_USE_GENAI || "").toLowerCase() === "true";
-    const endpoint = useGenAi ? "/api/vertex/send/route_second" : "/api/vertex/send";
+    const endpoint = model === SOLVIX_LITE_MODEL
+      ? "/api/gemini/send"
+      : useGenAi
+        ? "/api/vertex/send/route_second"
+        : "/api/vertex/send";
     
     // Start loading state
     setIsLoading(true);
@@ -534,17 +598,7 @@ function Chatbox(
       setLoadingInterval(null);
     }
     
-    // Reset all states to initial
-    setIsLoading(false);
-    setLoadingTime(0);
-    setConversationMode(false);
-    setMessages([]);
-    setAbortController(null);
-    resetImagesState();
-    setSessionId(generateId());
-    
-    // Reset hero state to show buttons again
-    onReset?.();
+    resetConversationState();
   };
 
   // 시각화 요청 함수
@@ -834,7 +888,11 @@ function Chatbox(
           ) : null}
 
           {conversationMode || messages.length > 0 || isLoading ? (
-            <div ref={mobileWrapperRef} className="px-4 pt-4 max-h-[360px] overflow-y-auto space-y-4">
+            <div
+              ref={mobileWrapperRef}
+              className="px-4 pt-4 max-h-[360px] overflow-y-auto space-y-4"
+              style={conversationOffsetY && conversationOffsetY !== 0 ? { transform: `translateY(${conversationOffsetY}px)` } : undefined}
+            >
               {messages.length === 0 && !isLoading ? (
                 <div className="flex flex-col gap-3 text-left text-white/70 text-[12px] leading-relaxed">
                   <p>안녕하세요! SOLVIX가 준비되어 있어요.</p>
@@ -882,18 +940,24 @@ function Chatbox(
                     <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={110} height={30} />
                   </button>
                   {showModelDropdown ? (
-                    <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
+                    <div className="absolute bottom-full left-0 mb-2 w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
                       <button
                         onClick={() => {
-                          setModel("SOLVIX 1.0");
+                          setModel(SOLVIX_MAIN_MODEL);
                           setShowModelDropdown(false);
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === "SOLVIX 1.0" ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_MAIN_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
                       >
                         <img src="/assets/desktop/brain_icon.svg" alt="SOLVIX 1.0" className="w-6 h-6" />
                         <span className="font-medium">SOLVIX 1.0</span>
                       </button>
-                      <button disabled className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400">
+                      <button
+                        onClick={() => {
+                          setModel(SOLVIX_LITE_MODEL);
+                          setShowModelDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_LITE_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                      >
                         <img src="/assets/desktop/wing_icon_blue.png" alt="SOLVIX 1.0 LITE" className="w-6 h-6" />
                         <span className="font-medium">SOLVIX 1.0 LITE</span>
                       </button>
@@ -1004,17 +1068,20 @@ function Chatbox(
                 <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
                   <button
                     onClick={() => {
-                      setModel("SOLVIX 1.0");
+                      setModel(SOLVIX_MAIN_MODEL);
                       setShowModelDropdown(false);
                     }}
-                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === "SOLVIX 1.0" ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_MAIN_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
                   >
                     <img src="/assets/desktop/brain_icon.svg" alt="SOLVIX 1.0" className="w-6 h-6" />
                     <span className="font-medium">SOLVIX 1.0</span>
                   </button>
                   <button
-                    disabled
-                    className="w-full px-4 py-3 text-left flex items-center gap-2 opacity-40 cursor-not-allowed text-gray-400"
+                    onClick={() => {
+                      setModel(SOLVIX_LITE_MODEL);
+                      setShowModelDropdown(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_LITE_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
                   >
                     <img src="/assets/desktop/wing_icon_blue.png" alt="SOLVIX 1.0 LITE" className="w-6 h-6" />
                     <span className="font-medium">SOLVIX 1.0 LITE</span>
