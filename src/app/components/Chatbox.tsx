@@ -937,29 +937,33 @@ function Chatbox(
                     className="cursor-pointer"
                     style={mobileModelButtonStyle}
                   >
-                    <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={110} height={30} />
+                  {model === SOLVIX_LITE_MODEL ? (
+                    <img src="/assets/desktop/chat-model-lite-select.svg" alt="모델 선택" width={130} height={32} />
+                  ) : (
+                    <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={115} height={30} />
+                  )}
                   </button>
                   {showModelDropdown ? (
-                    <div className="absolute bottom-full left-0 mb-2 w-[160px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
+                    <div className="absolute bottom-full left-0 mb-0 w-[130px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50 text-[12px]">
                       <button
                         onClick={() => {
                           setModel(SOLVIX_MAIN_MODEL);
                           setShowModelDropdown(false);
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_MAIN_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_MAIN_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
                       >
-                        <img src="/assets/desktop/brain_icon.svg" alt="SOLVIX 1.0" className="w-6 h-6" />
-                        <span className="font-medium">SOLVIX 1.0</span>
+                        <img src="/assets/desktop/brain_icon.svg" alt="SOLVIX 1.0" className="w-4.5 h-4.5" />
+                        <span className="font-medium tracking-tight">SOLVIX 1.0</span>
                       </button>
                       <button
                         onClick={() => {
                           setModel(SOLVIX_LITE_MODEL);
                           setShowModelDropdown(false);
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_LITE_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
+                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors flex items-center gap-2 ${model === SOLVIX_LITE_MODEL ? "bg-blue-50 text-blue-600" : "text-gray-700"}`}
                       >
-                        <img src="/assets/desktop/wing_icon_blue.png" alt="SOLVIX 1.0 LITE" className="w-6 h-6" />
-                        <span className="font-medium">SOLVIX 1.0 LITE</span>
+                        <img src="/assets/desktop/wing_icon_blue.png" alt="SOLVIX 1.0 LITE" className="w-4.5 h-4.5" />
+                        <span className="font-medium tracking-tight">SOLVIX 1.0 LITE</span>
                       </button>
                     </div>
                   ) : null}
@@ -977,8 +981,12 @@ function Chatbox(
                     <span className="text-[8px] text-[#3A4A65] mt-0.5 whitespace-nowrap">{daily.used}회 사용</span>
                   ) : null}
                 </div>
-                <button onClick={handleSubmit} className={sendButtonClasses} style={mobileSendButtonStyle}>
-                  <img src="/assets/desktop/chat-send-button.svg" alt="전송" width={30} height={30} />
+                <button
+                  onClick={handleSubmit}
+                  className={`${sendButtonClasses} flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[#007ABE] shadow-[0_6px_14px_rgba(0,122,190,0.35)] hover:bg-[#0066a8] transition-colors`}
+                  style={mobileSendButtonStyle}
+                >
+                  <span className="material-symbols-rounded text-[18px] text-white">arrow_upward_alt</span>
                 </button>
               </div>
             </div>
@@ -1062,7 +1070,11 @@ function Chatbox(
                 className="cursor-pointer"
                 style={modelSelectOffsetStyle}
               >
-                <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={isMobile ? 110 : 130} height={isMobile ? 30 : 34} />
+                {model === SOLVIX_LITE_MODEL ? (
+                  <img src="/assets/desktop/chat-model-lite-select.svg" alt="모델 선택" width={isMobile ? 125 : 145} height={isMobile ? 32 : 36} />
+                ) : (
+                  <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={isMobile ? 115 : 135} height={isMobile ? 30 : 34} />
+                )}
               </button>
               {showModelDropdown && (
                 <div className="absolute bottom-full left-0 mb-2 w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
