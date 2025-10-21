@@ -56,9 +56,11 @@ const resolveUserId = async (request: NextRequest): Promise<string | null> => {
   return user.id as string;
 };
 
-export const GET = async (request: NextRequest, { params }: { params?: { sessionId?: string } }) => {
-  if (params?.sessionId) {
-    return conversationBySessionResponse(request, params.sessionId);
+export const GET = async (request: NextRequest) => {
+  const sessionId = request.nextUrl.searchParams.get("sessionId")?.trim();
+
+  if (sessionId) {
+    return conversationBySessionResponse(request, sessionId);
   }
   return listConversationsResponse(request);
 };
