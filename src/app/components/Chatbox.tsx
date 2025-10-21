@@ -938,9 +938,9 @@ function Chatbox(
                     style={mobileModelButtonStyle}
                   >
                   {model === SOLVIX_LITE_MODEL ? (
-                    <img src="/assets/desktop/chat-model-lite-select.svg" alt="모델 선택" width={130} height={32} />
+                    <img src="/assets/desktop/chat-model-lite-select.svg" alt="모델 선택" width={135} height={32} />
                   ) : (
-                    <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={115} height={30} />
+                    <img src="/assets/desktop/chat-model-select.svg" alt="모델 선택" width={112} height={30} />
                   )}
                   </button>
                   {showModelDropdown ? (
