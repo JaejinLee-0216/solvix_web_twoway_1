@@ -38,7 +38,7 @@ const generateSessionId = () => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
-  } catch (_error) {
+  } catch {
     // ignore
   }
   return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;

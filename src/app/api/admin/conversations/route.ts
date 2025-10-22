@@ -27,7 +27,7 @@ const parseImageUrls = (value: unknown): string[] => {
     if (Array.isArray(parsed)) {
       return parsed.filter((item): item is string => typeof item === "string" && item.length > 0);
     }
-  } catch (error) {
+  } catch {
     // treat as single entry
   }
 

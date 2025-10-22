@@ -113,6 +113,7 @@ function Chatbox(
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null);
+  const isMobile = variant === "mobile";
 
   const applyUsage = useCallback((usage: any) => {
     const usedPool = [usage?.usedToday, usage?.used, usage?.daily_count]
@@ -688,7 +689,6 @@ function Chatbox(
     }
   };
 
-  const isMobile = variant === "mobile";
   const desktopContainerStyle = !isMobile ? { top: 620 } : undefined;
   const desktopPreviewStyle = !isMobile ? { top: 540 } : undefined;
   const desktopOverlayStyle = !isMobile ? { top: 260 } : undefined;
