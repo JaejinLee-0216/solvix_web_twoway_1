@@ -9,6 +9,39 @@ import PaymentPopup from "../PaymentPopup";
 import MyPage from "../MyPage";
 import AdminPanel from "../AdminPanel";
 
+const testimonialCards = [
+  {
+    id: "kim",
+    rating: "★★★★★",
+    headline: "준비한 문제만 만나면 시간이 부족했는데, 이번 모의고사는 여유로웠어요!",
+    body: [
+      "2주 전부터 실전 문제 풀이 감각이 떨어질까 봐 걱정했는데, SOLVIX는 '답'만 알려주지 않았어요.",
+      "같은 조건에서 왜 이 공식을 써야 하는지, 실수를 줄이는 체크포인트까지 짚어주니까 마지막 20분은 검토할 시간이 생겼어요.",
+    ],
+    footer: "김OO (자사고 3학년)",
+  },
+  {
+    id: "lee",
+    rating: "★★★★★",
+    headline: "100점을 위한 마지막 1%는 시간 관리 정복입니다.",
+    body: [
+      "의대 준비생이라 혼자 공부 시간이 부족했는데, SOLVIX는 풀이 흐름을 빠르게 잡아줘서 계산 실수가 줄었어요.",
+      "딱 5분만 투자해도 사고 과정이 정리되니, 시간을 아껴 다른 과목에도 집중할 수 있었어요!",
+    ],
+    footer: "이OO (일반고 3학년)",
+  },
+  {
+    id: "park",
+    rating: "★★★★★",
+    headline: "단순한 답이 아니라, 진짜 '해석'을 원한다면 정답은 SOLVIX입니다.",
+    body: [
+      "사설 문제를 풀 때마다 해설만 던져주는 서비스에 지쳤는데, SOLVIX는 '왜 이런 생각을 해야 하는지'를 알려줘요.",
+      "혼자 풀이를 적고 다시 검토하니, 서술형에서 놓치는 포인트가 줄었고 자신감이 붙었어요 :)",
+    ],
+    footer: "박OO (일반고 2학년)",
+  },
+];
+
 export default function MobileLanding() {
   const CHATBOX_INITIAL_OFFSET = 160;
   const CHATBOX_ACTIVE_OFFSET = 90;
@@ -424,10 +457,33 @@ export default function MobileLanding() {
 
       {infoPopup ? (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm">
-          <div className="absolute inset-y-6 left-1/2 w-[90%] max-w-sm -translate-x-1/2 overflow-hidden rounded-2xl bg-[#10131A] border border-white/10 shadow-[0_20px_60px_rgba(5,10,20,0.45)]">
+          <div className="absolute left-1/2 top-1/2 w-[90%] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl bg-[#10131A] border border-white/10 shadow-[0_20px_60px_rgba(5,10,20,0.45)]">
             <div className="sticky top-0 z-10 bg-[#10131A] px-5 pt-6 pb-4 border-b border-white/8 text-center">
-              <h2 className="text-[17px] font-semibold text-white">SOLVIX, 더 활용하고 싶으신가요?</h2>
-              <p className="mt-1 text-[12px] text-white/60">나에게 맞는 요금제를 선택하세요.</p>
+              {(() => {
+                switch (infoPopup) {
+                  case "performance":
+                    return (
+                      <>
+                        <h2 className="text-[17px] font-semibold text-white">왜 SOLVIX가 정답일까요?</h2>
+                        <p className="mt-1 text-[12px] text-white/60">'생각의 과정'을 함께 따라가며 풀이의 길로 안내합니다.</p>
+                      </>
+                    );
+                  case "testimonials":
+                    return (
+                      <>
+                        <h2 className="text-[17px] font-semibold text-white">"해설만 툭, 던져주지 않습니다."</h2>
+                        <p className="mt-1 text-[12px] text-white/60">SOLVIX로 '스스로 푸는 힘'을 기른 학생들의 후기입니다.</p>
+                      </>
+                    );
+                  default:
+                    return (
+                      <>
+                        <h2 className="text-[17px] font-semibold text-white">SOLVIX, 더 활용하고 싶으신가요?</h2>
+                        <p className="mt-1 text-[12px] text-white/60">나에게 맞는 요금제를 선택하세요.</p>
+                      </>
+                    );
+                }
+              })()}
               <button
                 onClick={() => {
                   setInfoPopup(null);
@@ -439,28 +495,40 @@ export default function MobileLanding() {
               </button>
             </div>
 
-            <div className="relative h-[70vh] overflow-y-auto px-5 pb-6">
-              <div className="space-y-5">
+            <div className="relative max-h-[460px] overflow-y-auto px-5 pb-5">
+              <div className="space-y-4">
             {infoPopup === "performance" ? (
                   <div className="space-y-3">
-                    <h3 className="text-base font-semibold text-white">SOLVIX 성능</h3>
                 <img src="/assets/desktop/score_graph.svg" alt="성능 비교 그래프" className="w-full rounded-xl" />
-                <p className="text-[12px] text-white/70 leading-[1.5]">
-                  최고난도 모의고사에서도 만점을 기록했고, 평균 풀이 시간은 3분 15초입니다. 다른 AI보다 빠르고 정확해요.
+                <p className="text-[12px] text-white/70 leading-[1.5] text-center">
+                  결과가 증명하듯, SOLVIX는 수능 수학에 가장 최적화된 LEARNING ENGINE입니다.
                 </p>
                   </div>
             ) : null}
 
             {infoPopup === "testimonials" ? (
-                  <div className="space-y-3">
-                    <h3 className="text-base font-semibold text-white">생생한 후기를 확인해 보세요</h3>
-                    <div className="flex flex-col items-center gap-2">
-                      <img src="/assets/desktop/card1.svg" alt="후기 1" className="w-36 max-w-full rounded-lg" />
-                      <img src="/assets/desktop/card2.svg" alt="후기 2" className="w-36 max-w-full rounded-lg" />
-                      <img src="/assets/desktop/card3.svg" alt="후기 3" className="w-36 max-w-full rounded-lg" />
+                  <div className="space-y-4">
+                    <div className="h-[300px] overflow-y-auto pr-1 snap-y snap-mandatory">
+                      {testimonialCards.map((card) => (
+                        <div
+                          key={card.id}
+                          className="mb-4 flex h-full min-h-[300px] flex-col justify-between rounded-2xl border border-white/12 bg-[#151822] px-5 py-5 text-left text-white shadow-[0_12px_32px_rgba(5,10,20,0.45)] snap-start last:mb-0"
+                        >
+                          <div className="space-y-3">
+                            <div className="text-sm font-semibold text-[#FFC857]">{card.rating}</div>
+                            <h3 className="text-[14px] font-semibold leading-[1.4] text-white">{card.headline}</h3>
+                            {card.body.map((paragraph, index) => (
+                              <p key={index} className="text-[12px] leading-[1.6] text-white/70">
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
+                          <p className="mt-4 text-[11px] font-semibold text-white/60">{card.footer}</p>
+                        </div>
+                      ))}
                     </div>
                     <p className="text-[12px] text-white/65 text-center">
-                      더 많은 후기가 필요하시면 톡으로 말씀해 주세요. 바로 보내 드릴게요.
+                      SOLVIX와 함께라면, 여러분도 '스스로 푸는 힘'을 기를 수 있습니다.
                     </p>
                 </div>
             ) : null}
@@ -552,16 +620,6 @@ export default function MobileLanding() {
                 </div>
             ) : null}
 
-                {infoPopup !== "pricing" ? (
-                  <button
-                    onClick={() => {
-                      setInfoPopup(null);
-                    }}
-                    className="mt-6 w-full rounded-full border border-white/20 py-3 text-sm text-white/80"
-                  >
-              닫기
-            </button>
-                ) : null}
               </div>
             </div>
           </div>
