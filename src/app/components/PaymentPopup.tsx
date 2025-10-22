@@ -43,7 +43,7 @@ export default function PaymentPopup({ isOpen, onClose, planType }: PaymentPopup
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
             aria-label="닫기"
           >
-            <span className="material-symbols-rounded text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
@@ -61,7 +61,7 @@ export default function PaymentPopup({ isOpen, onClose, planType }: PaymentPopup
           <ul className="mt-3 space-y-1.5">
             {currentPlan.features.map((feature, idx) => (
               <li key={idx} className="flex items-start gap-2.5 text-[11px] text-white/80">
-                <span className="mt-[1px] text-[#82FFB5] material-symbols-rounded text-[15px]">check</span>
+                <span className="mt-[1px] text-[#82FFB5] material-symbols-outlined text-[15px]">check</span>
                 <span>{feature}</span>
               </li>
             ))}
@@ -85,7 +85,7 @@ export default function PaymentPopup({ isOpen, onClose, planType }: PaymentPopup
                 </span>
                 <span className="text-[12px] text-white/85">{method.label}</span>
               </div>
-              <span className="material-symbols-rounded text-[16px] text-white/35">chevron_right</span>
+              <span className="material-symbols-outlined text-[16px] text-white/35">chevron_right</span>
             </button>
           ))}
         </div>

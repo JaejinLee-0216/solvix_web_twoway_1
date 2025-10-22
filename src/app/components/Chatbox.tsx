@@ -833,7 +833,7 @@ function Chatbox(
         ))}
         {isLoading ? (
           <div className="flex justify-start">
-            <div className={loadingOuterClass}>
+            <div>
               <div className="px-3 py-3 rounded-[14px] bg-[#0B0F18]/80 border border-white/10 inline-flex items-center gap-3">
                 <div className="relative w-10 h-10 flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full border border-white/20" />

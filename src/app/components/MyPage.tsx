@@ -76,7 +76,7 @@ export default function MyPage({ isOpen, onClose, userInfo, onResumeSession }: M
             className="text-white/60 hover:text-white text-xl sm:text-2xl"
             aria-label="닫기"
           >
-            <span className="material-symbols-rounded text-[24px]">close</span>
+            <span className="material-symbols-outlined text-[24px]">close</span>
           </button>
         </div>
 

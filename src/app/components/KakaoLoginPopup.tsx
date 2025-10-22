@@ -46,7 +46,7 @@ export default function KakaoLoginPopup({ isOpen, onClose, onLoginSuccess }: Kak
             className="flex items-center justify-center text-gray-400 hover:text-gray-600 w-8 h-8"
             aria-label="닫기"
           >
-            <span className="material-symbols-rounded text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
