@@ -273,7 +273,7 @@ export default function MobileLanding() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#03050A] text-white font-[var(--font-sans)]">
+    <div className="h-screen w-full overflow-hidden bg-[#03050A] text-white font-[var(--font-sans)]">
       <header className="px-4 pt-6 pb-5 flex items-center justify-between">
         <button
           type="button"
@@ -305,7 +305,7 @@ export default function MobileLanding() {
         </div>
       </header>
 
-      <main className="px-4 pb-16 space-y-0">
+      <main className="flex h-[calc(100vh-76px)] flex-col px-4 pb-6 space-y-0">
         {!hasConversationStarted ? (
           <section className="text-center space-y-2">
             <h1 className="text-[26px] font-semibold leading-tight"> 막혔어? 올려봐!</h1>
@@ -317,7 +317,7 @@ export default function MobileLanding() {
           <section style={dropzoneOffsetY !== 0 ? { transform: `translateY(${dropzoneOffsetY}px)` } : undefined}>
             <div
               ref={dropRef}
-              className={`rounded-[18px] border-2 border-dashed border-[#3BA7FF]/70 bg-white/[0.06] flex flex-col items-center px-5 py-20 transition-all ${imageAttached ? "bg-[#0A1625]/40" : "hover:bg-white/10"}`}
+              className={`rounded-[18px] border-2 border-dashed border-[#3BA7FF]/70 bg-white/[0.06] flex flex-col items-center px-5 py-16 transition-all ${imageAttached ? "bg-[#0A1625]/40" : "hover:bg-white/10"}`}
               role="button"
               tabIndex={0}
               onKeyDown={(event) => {
@@ -336,7 +336,7 @@ export default function MobileLanding() {
           </section>
         ) : null}
 
-        <section className="pb-6">
+        <section className="pb-2">
           <Chatbox
             ref={chatboxRef}
             variant="mobile"
