@@ -870,7 +870,7 @@ function Chatbox(
                 <div key={index} className={imagePreviewClasses}>
                   <img src={preview} alt={`preview-${index + 1}`} className="w-full h-full object-cover" />
                   <button onClick={() => handleRemoveImage(index)} className={`${removeButtonClasses} text-[16px]`} aria-label="이미지 제거">
-                    <span className="material-symbols-rounded text-[16px]">close</span>
+                  <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 </div>
               ))}
@@ -976,7 +976,7 @@ function Chatbox(
                   className={`${sendButtonClasses} flex items-center justify-center w-[34px] h-[34px] rounded-full bg-[#007ABE] shadow-[0_6px_14px_rgba(0,122,190,0.35)] hover:bg-[#0066a8] transition-colors`}
                   style={mobileSendButtonStyle}
                 >
-                  <span className="material-symbols-rounded text-[18px] text-white">arrow_upward_alt</span>
+                  <span className="material-symbols-outlined text-[18px] text-white">arrow_upward</span>
                 </button>
               </div>
             </div>

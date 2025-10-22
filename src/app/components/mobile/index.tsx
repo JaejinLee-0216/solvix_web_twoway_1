@@ -300,7 +300,7 @@ export default function MobileLanding() {
             className="flex h-8 w-8 items-center justify-center text-white hover:text-white/80"
             aria-label="메뉴 열기"
           >
-            <span className="material-symbols-rounded text-[24px]">menu</span>
+            <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>
         </div>
       </header>
@@ -385,7 +385,7 @@ export default function MobileLanding() {
                 <span className="absolute -bottom-2 left-1/2 h-[2px] w-[120%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#4CB4FF]/50 to-transparent" />
               </div>
               <button onClick={() => closeMenu()} className="h-8 w-8 flex items-center justify-center text-white hover:text-white/80" aria-label="메뉴 닫기">
-                <span className="material-symbols-rounded text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
 
@@ -395,21 +395,21 @@ export default function MobileLanding() {
                 className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
               >
                 <span className="text-[14px]">성능 비교</span>
-                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+                <span className="material-symbols-outlined text-[16px] text-[#4CB4FF]">chevron_right</span>
               </button>
               <button
                 onClick={() => closeMenu(() => setInfoPopup("testimonials"))}
                 className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
               >
                 <span className="text-[14px]">사용 후기</span>
-                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+                <span className="material-symbols-outlined text-[16px] text-[#4CB4FF]">chevron_right</span>
               </button>
               <button
                 onClick={() => closeMenu(() => setInfoPopup("pricing"))}
                 className="w-full flex items-center justify-between rounded-2xl bg-[rgba(5,10,21,0.9)] border border-white/10 px-4 py-3 text-left text-white/90 transition-colors duration-200 hover:bg-[#071126]"
               >
                 <span className="text-[14px]">요금제 안내</span>
-                <span className="material-symbols-rounded text-[16px] text-[#4CB4FF]">chevron_right</span>
+                <span className="material-symbols-outlined text-[16px] text-[#4CB4FF]">chevron_right</span>
               </button>
             </div>
 
@@ -491,7 +491,7 @@ export default function MobileLanding() {
                 className="absolute right-4 top-4 h-8 w-8 flex items-center justify-center text-white hover:text-white/80"
                 aria-label="요금제 닫기"
               >
-                <span className="material-symbols-rounded text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
@@ -543,15 +543,15 @@ export default function MobileLanding() {
                       </p>
                       <div className="mt-4 space-y-1.5 text-[12px] leading-[1.5] text-white/80">
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 문제풀이 (최초 5회 제공)</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>매일 풀이 1회 제공</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>풀이 내역 무제한 열람</span>
                         </div>
                       </div>
@@ -568,11 +568,11 @@ export default function MobileLanding() {
                       <div className="mt-3 space-y-2 text-[12px] leading-[1.6] text-white/80">
                         <div className="font-semibold text-white/85">Basic 플랜의 모든 기능 포함</div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 문제 풀이 (매일 10회 제공)</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 풀이 첨삭 (매일 3회 제공)</span>
                         </div>
                 </div>
@@ -593,19 +593,19 @@ export default function MobileLanding() {
                       <div className="mt-3 space-y-2 text-[12px] leading-[1.6] text-white/82">
                         <div className="font-semibold text-white/85">Pro 플랜의 모든 기능 포함</div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 문제풀이 (무제한 제공)</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 풀이 첨삭 (무제한 제공)</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>AI 문제 검증 (무제한 제공)</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] text-white/80 material-symbols-rounded text-[16px]">check</span>
+                          <span className="material-symbols-outlined text-[16px] text-white/80 mt-[1px]">check</span>
                           <span>TEAM MEDICAL T.A와의 1:1 질의응답권 (매일 5회 제공)</span>
                         </div>
                       </div>
