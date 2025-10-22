@@ -273,7 +273,10 @@ export default function MobileLanding() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#03050A] text-white font-[var(--font-sans)]">
+    <div
+      className="h-screen w-full overflow-hidden bg-[#03050A] text-white font-[var(--font-sans)]"
+      style={{ height: "100dvh" }}
+    >
       <header className="px-4 pt-6 pb-5 flex items-center justify-between">
         <button
           type="button"
@@ -305,7 +308,10 @@ export default function MobileLanding() {
         </div>
       </header>
 
-      <main className="flex h-[calc(100vh-76px)] flex-col px-4 pb-6 space-y-0">
+      <main
+        className="flex h-[calc(100vh-76px)] flex-col px-4 pb-6 space-y-0"
+        style={{ height: "calc(100dvh - 76px)" }}
+      >
         {!hasConversationStarted ? (
           <section className="text-center space-y-2">
             <h1 className="text-[26px] font-semibold leading-tight"> 막혔어? 올려봐!</h1>
