@@ -319,7 +319,7 @@ function Chatbox(
         throw error;
       }
     },
-  }), [applyImageFiles, clearConversationState, onStartConversation]);
+  }), [applyImageFiles, clearConversationState, onStartConversation, resetConversationState]);
 
   const handleCopy = async (value: string, messageId?: string) => {
     if (!value) return;
@@ -377,7 +377,7 @@ function Chatbox(
   }, [fetchUsage]);
 
   // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (isMobile) {
       requestAnimationFrame(() => {
         mobileWrapperRef.current?.scrollTo({ top: mobileWrapperRef.current.scrollHeight, behavior: "smooth" });
@@ -385,11 +385,11 @@ function Chatbox(
     } else {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [isMobile]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -723,9 +723,6 @@ function Chatbox(
     : "absolute top-[4px] right-[4px] p-1 text-white/70 hover:text-white cursor-pointer";
 
   const wrapperClasses = isMobile ? "relative" : "";
-  const bubbleBaseClasses = isMobile ? "px-3 py-2 rounded-[12px]" : "px-4 py-3 rounded-[10px]";
-  const messageOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[90%]";
-  const loadingOuterClass = isMobile ? "inline-block max-w-full" : "inline-block max-w-[80%]";
   const messageTextClass = isMobile ? "text-[11px] leading-[1.6] whitespace-pre-wrap" : "text-sm whitespace-pre-wrap";
   const copyButtonClass = isMobile
     ? "inline-flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
@@ -736,14 +733,9 @@ function Chatbox(
   const conversationContainerClasses = isMobile
     ? "mt-5 max-h-[360px] overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-[#BFD4F0] scrollbar-track-transparent"
     : "absolute left-[171px] w-[858px] h-[320px] text-white overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800";
-  const conversationInnerClasses = isMobile ? "flex flex-col gap-4 px-2" : "flex flex-col gap-4 p-4";
   const loadingOverlayClasses = isMobile
     ? "absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col z-40 px-6 py-8"
     : "absolute left-[171px] w-[858px] h-[320px] bg-black/80 backdrop-blur-sm rounded-lg";
-  const loadingHistoryClasses = isMobile
-    ? "flex-1 overflow-y-auto flex flex-col gap-4 w-full"
-    : "flex flex-col gap-4 p-4 h-full overflow-y-auto";
-  const loadingCancelButtonClass = "bg-[#007ABE] hover:bg-[#006599] text-white rounded-lg transition-colors";
   const visualizationDimensions = isMobile ? { width: 320, height: 220 } : { width: 750, height: 400 };
   const wrapperStyle = offsetY !== 0 ? { transform: `translateY(${offsetY}px)` } : undefined;
   const controlsOffsetStyle = isMobile && !isLoading && controlsOffsetY !== 0 ? { transform: `translateY(${controlsOffsetY}px)` } : undefined;
@@ -755,8 +747,6 @@ function Chatbox(
   const mobileModelButtonStyle = isMobile ? modelSelectOffsetStyle : undefined;
   const mobileUsageBlockStyle = isMobile ? usageBlockOffsetStyle : undefined;
   const mobileSendButtonStyle = isMobile ? sendButtonOffsetStyle : undefined;
-
-  const totalAllowance = daily.unlimited ? Infinity : Math.max(daily.free + daily.bonus, daily.used);
 
   const extractMessageImages = (msg: Message): string[] => {
     if (Array.isArray(msg.images) && msg.images.length > 0) {

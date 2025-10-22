@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
     }
 
     // 특정 사용자의 모든 대화 조회
-    const { data: conversations, error } = await supabaseAdmin
+    const { data: conversations, error: fetchError } = await supabaseAdmin
       .from("user_conversations")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Conversations fetch error:", error);
+    if (fetchError) {
+      console.error("Conversations fetch error:", fetchError);
       return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
     }
 

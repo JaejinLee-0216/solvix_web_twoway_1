@@ -37,7 +37,7 @@ const generateSessionId = () => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
-  } catch (error) {
+  } catch (_error) {
     // ignore
   }
   return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -56,15 +56,15 @@ const resolveSupabaseUserId = async (request: NextRequest): Promise<string | nul
       return null;
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error: lookupError } = await supabaseAdmin
       .from("users")
       .select("id")
       .eq("kakao_id", kakaoId)
       .single();
 
-    if (error || !data) {
-      if (error) {
-        console.error("Supabase user lookup error:", error);
+    if (lookupError || !data) {
+      if (lookupError) {
+        console.error("Supabase user lookup error:", lookupError);
       }
       return null;
     }

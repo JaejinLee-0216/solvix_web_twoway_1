@@ -330,7 +330,6 @@ function tryEvalObject(text: string): any | null {
   }
 
   try {
-    // eslint-disable-next-line no-new-func
     const fn = new Function(`"use strict"; return (${candidate});`);
     const result = fn();
     if (result && typeof result === "object") {

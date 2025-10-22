@@ -163,11 +163,6 @@ export default function Hero() {
     input.click();
   };
 
-  const handleScrollToChat = () => {
-    chatboxRef.current?.focusInput();
-    document.getElementById("chatbox-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
   return (
     <section className="container-1200 relative font-[var(--font-sans)]" style={{ height: 1405 }}>
       {/* Background */}

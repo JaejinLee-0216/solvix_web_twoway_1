@@ -465,14 +465,14 @@ export default function MobileLanding() {
                     return (
                       <>
                         <h2 className="text-[17px] font-semibold text-white">왜 SOLVIX가 정답일까요?</h2>
-                        <p className="mt-1 text-[12px] text-white/60">'생각의 과정'을 함께 따라가며 풀이의 길로 안내합니다.</p>
+                        <p className="mt-1 text-[12px] text-white/60">&lsquo;생각의 과정&rsquo;을 함께 따라가며 풀이의 길로 안내합니다.</p>
                       </>
                     );
                   case "testimonials":
                     return (
                       <>
-                        <h2 className="text-[17px] font-semibold text-white">"해설만 툭, 던져주지 않습니다."</h2>
-                        <p className="mt-1 text-[12px] text-white/60">SOLVIX로 '스스로 푸는 힘'을 기른 학생들의 후기입니다.</p>
+                        <h2 className="text-[17px] font-semibold text-white">&ldquo;해설만 툭, 던져주지 않습니다.&rdquo;</h2>
+                        <p className="mt-1 text-[12px] text-white/60">SOLVIX로 &lsquo;스스로 푸는 힘&rsquo;을 기른 학생들의 후기입니다.</p>
                       </>
                     );
                   default:
@@ -528,7 +528,7 @@ export default function MobileLanding() {
                       ))}
                     </div>
                     <p className="text-[12px] text-white/65 text-center">
-                      SOLVIX와 함께라면, 여러분도 '스스로 푸는 힘'을 기를 수 있습니다.
+                      SOLVIX와 함께라면, 여러분도 &lsquo;스스로 푸는 힘&rsquo;을 기를 수 있습니다.
                     </p>
                 </div>
             ) : null}
