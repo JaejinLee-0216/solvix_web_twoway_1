@@ -5,6 +5,7 @@ import ScoreGraph from "./ScoreGraph";
 import KakaoLoginPopup from "./KakaoLoginPopup";
 import MyPage from "./MyPage";
 import AdminPanel from "./AdminPanel";
+import AttendanceModal from "./AttendanceModal";
 
 export default function Hero() {
   const chatboxRef = useRef<ChatboxHandle | null>(null);
@@ -258,6 +259,8 @@ export default function Hero() {
         onClose={() => setShowLoginPopup(false)}
         onLoginSuccess={handleLoginSuccess}
       />
+
+      <AttendanceModal isLoggedIn={isLoggedIn} userName={userInfo?.nickname} />
       
       {/* MyPage */}
       <MyPage

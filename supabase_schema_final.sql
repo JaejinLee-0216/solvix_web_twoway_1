@@ -52,6 +52,32 @@ CREATE TABLE IF NOT EXISTS public.user_question_balance (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.user_daily_engagements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  activity_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  attendance_claimed_at TIMESTAMPTZ,
+  attendance_reward_tier VARCHAR(20),
+  attendance_reward_amount INT,
+  ad_claimed_at TIMESTAMPTZ,
+  ad_reward_tier VARCHAR(20),
+  ad_reward_amount INT,
+  last_prompted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, activity_date)
+);
+
+CREATE TABLE IF NOT EXISTS public.user_lottery_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  source VARCHAR(20) NOT NULL CHECK (source IN ('attendance', 'ad', 'manual')),
+  reward_tier VARCHAR(20) NOT NULL,
+  reward_amount INT NOT NULL,
+  bonus_balance_after INT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- View to expose usage with bonus total for current plan
 CREATE OR REPLACE VIEW public.v_user_usage_today AS
 SELECT
@@ -104,6 +130,8 @@ CREATE INDEX IF NOT EXISTS idx_usage_user_date ON public.user_usage(user_id, usa
 CREATE INDEX IF NOT EXISTS idx_conv_user ON public.user_conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_admin ON public.admin_actions(admin_user_id);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_target ON public.admin_actions(target_user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_engagement_user_date ON public.user_daily_engagements(user_id, activity_date);
+CREATE INDEX IF NOT EXISTS idx_lottery_history_user ON public.user_lottery_history(user_id, created_at DESC);
 
 -- Updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -125,6 +153,9 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER trg_question_balance_updated BEFORE UPDATE ON public.user_question_balance
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER trg_daily_engagements_updated BEFORE UPDATE ON public.user_daily_engagements
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER trg_settings_updated BEFORE UPDATE ON public.system_settings
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -135,6 +166,8 @@ ALTER TABLE public.user_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_daily_engagements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_lottery_history ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 -- Users can see their own data
@@ -168,6 +201,20 @@ CREATE POLICY question_balance_self_update ON public.user_question_balance
 CREATE POLICY question_balance_admin_all ON public.user_question_balance
   FOR ALL USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
 
+CREATE POLICY daily_engagement_self_select ON public.user_daily_engagements
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+CREATE POLICY daily_engagement_self_insert ON public.user_daily_engagements
+  FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+CREATE POLICY daily_engagement_self_update ON public.user_daily_engagements
+  FOR UPDATE USING (auth.uid()::text = user_id::text);
+CREATE POLICY daily_engagement_admin_all ON public.user_daily_engagements
+  FOR ALL USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
+
+CREATE POLICY lottery_history_self_select ON public.user_lottery_history
+  FOR SELECT USING (auth.uid()::text = user_id::text);
+CREATE POLICY lottery_history_admin_select ON public.user_lottery_history
+  FOR SELECT USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = auth.uid()::text AND u.is_admin));
+
 DROP VIEW IF EXISTS public.v_user_usage_today;
 
 -- Subscription policies
@@ -200,6 +247,8 @@ DROP FUNCTION IF EXISTS get_user_usage_today(UUID);
 DROP FUNCTION IF EXISTS increment_user_usage(UUID, INT);
 DROP FUNCTION IF EXISTS increment_user_usage(UUID);
 DROP FUNCTION IF EXISTS give_bonus_questions(UUID, UUID, INT);
+DROP FUNCTION IF EXISTS ensure_daily_engagement_row(UUID);
+DROP FUNCTION IF EXISTS claim_daily_reward(UUID, TEXT);
 
 CREATE OR REPLACE FUNCTION create_user_from_kakao(
   p_kakao_id VARCHAR(50),
@@ -448,6 +497,115 @@ BEGIN
   RETURNING * INTO v_row;
 
   RETURN v_row.id;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION ensure_daily_engagement_row(p_user_id UUID)
+RETURNS public.user_daily_engagements AS $$
+DECLARE
+  v_row public.user_daily_engagements%ROWTYPE;
+BEGIN
+  INSERT INTO public.user_daily_engagements (
+    user_id,
+    activity_date,
+    attendance_reward_amount,
+    ad_reward_amount
+  ) VALUES (
+    p_user_id,
+    CURRENT_DATE,
+    NULL,
+    NULL
+  )
+  ON CONFLICT (user_id, activity_date) DO UPDATE
+    SET updated_at = now()
+  RETURNING * INTO v_row;
+
+  RETURN v_row;
+END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION claim_daily_reward(p_user_id UUID, p_source TEXT)
+RETURNS TABLE(
+  reward_source VARCHAR,
+  reward_tier VARCHAR,
+  reward_amount INT,
+  claimed_at TIMESTAMPTZ,
+  bonus_balance_after INT
+) AS $$
+DECLARE
+  v_source TEXT := LOWER(COALESCE(p_source, 'attendance'));
+  v_engagement public.user_daily_engagements%ROWTYPE;
+  v_reward INT;
+  v_tier TEXT;
+  v_now TIMESTAMPTZ := now();
+  v_rand NUMERIC;
+  v_bonus_balance INT;
+BEGIN
+  IF v_source NOT IN ('attendance', 'ad') THEN
+    RAISE EXCEPTION 'Unsupported reward source %', p_source USING ERRCODE = '22023';
+  END IF;
+
+  v_engagement := ensure_daily_engagement_row(p_user_id);
+
+  IF v_source = 'attendance' THEN
+    IF v_engagement.attendance_claimed_at IS NOT NULL THEN
+      RAISE EXCEPTION 'Attendance reward already claimed' USING ERRCODE = 'P0001';
+    END IF;
+  ELSE
+    IF v_engagement.attendance_claimed_at IS NULL THEN
+      RAISE EXCEPTION 'Attendance reward must be claimed before ad reward' USING ERRCODE = 'P0001';
+    END IF;
+    IF v_engagement.ad_claimed_at IS NOT NULL THEN
+      RAISE EXCEPTION 'Ad reward already claimed' USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  v_rand := random();
+
+  IF v_rand < 0.90 THEN
+    v_reward := 1;
+    v_tier := 'normal';
+  ELSIF v_rand < 0.95 THEN
+    v_reward := 3;
+    v_tier := 'rare';
+  ELSIF v_rand < 0.98 THEN
+    v_reward := 5;
+    v_tier := 'epic';
+  ELSE
+    v_reward := 10;
+    v_tier := 'legendary';
+  END IF;
+
+  INSERT INTO public.user_question_balance (user_id, bonus_balance, unlimited)
+  VALUES (p_user_id, v_reward, FALSE)
+  ON CONFLICT (user_id) DO UPDATE
+    SET bonus_balance = user_question_balance.bonus_balance + EXCLUDED.bonus_balance,
+        updated_at = now()
+  RETURNING bonus_balance INTO v_bonus_balance;
+
+  IF v_source = 'attendance' THEN
+    UPDATE public.user_daily_engagements
+    SET attendance_claimed_at = v_now,
+        attendance_reward_tier = v_tier,
+        attendance_reward_amount = v_reward,
+        updated_at = now()
+    WHERE id = v_engagement.id;
+  ELSE
+    UPDATE public.user_daily_engagements
+    SET ad_claimed_at = v_now,
+        ad_reward_tier = v_tier,
+        ad_reward_amount = v_reward,
+        updated_at = now()
+    WHERE id = v_engagement.id;
+  END IF;
+
+  INSERT INTO public.user_lottery_history (user_id, source, reward_tier, reward_amount, bonus_balance_after)
+  VALUES (p_user_id, v_source, v_tier, v_reward, v_bonus_balance);
+
+  RETURN QUERY SELECT
+    v_source,
+    v_tier,
+    v_reward,
+    v_now,
+    v_bonus_balance;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Insert sample admin user (optional - for testing)

@@ -8,6 +8,7 @@ import KakaoLoginPopup from "../KakaoLoginPopup";
 import PaymentPopup from "../PaymentPopup";
 import MyPage from "../MyPage";
 import AdminPanel from "../AdminPanel";
+import AttendanceModal from "../AttendanceModal";
 
 const testimonialCards = [
   {
@@ -655,6 +656,8 @@ export default function MobileLanding() {
         isOpen={showAdminPanel}
         onClose={() => setShowAdminPanel(false)}
       />
+
+      <AttendanceModal isLoggedIn={isLoggedIn} userName={userInfo?.nickname} />
     </div>
   );
 }
