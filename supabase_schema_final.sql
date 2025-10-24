@@ -601,11 +601,13 @@ BEGIN
   VALUES (p_user_id, v_source, v_tier, v_reward, v_bonus_balance);
 
   RETURN QUERY SELECT
-    v_source,
-    v_tier,
-    v_reward,
+    v_source::VARCHAR,
+    v_tier::VARCHAR,
+    v_reward::INT,
     v_now,
-    v_bonus_balance;
+    v_bonus_balance::INT;
+
+  RETURN;
 END; $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Insert sample admin user (optional - for testing)

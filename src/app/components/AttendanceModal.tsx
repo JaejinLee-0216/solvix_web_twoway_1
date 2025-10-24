@@ -292,17 +292,17 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
     }
 
     return (
-      <div className="mt-6 rounded-3xl bg-gradient-to-br from-[#1b2848] via-[#14203b] to-[#10172B] px-8 py-10 text-center shadow-[0_25px_60px_rgba(10,18,40,0.55)]">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold uppercase tracking-wider text-[#7fdcff]">
+      <div className="mt-4 rounded-3xl bg-gradient-to-br from-[#1b2848] via-[#14203b] to-[#10172B] px-6 py-8 text-center shadow-[0_25px_60px_rgba(10,18,40,0.45)]">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#7fdcff]">
           <span className="material-symbols-outlined text-base">celebration</span>
           {lastReward.source === "ad" ? "광고 보상" : "출석 보상"}
         </div>
-        <p className="mt-6 text-lg text-white/80">오늘의 당첨 결과는...</p>
-        <p className="mt-2 text-5xl font-extrabold text-white">
+        <p className="mt-4 text-base text-white/80">오늘의 당첨 결과는...</p>
+        <p className="mt-2 text-4xl font-extrabold text-white">
           이용권 {lastReward.amount}회
         </p>
-        <p className="mt-3 text-sm text-white/60">현재 보너스 잔여: {status?.bonusBalance ?? lastReward.bonusBalanceAfter}회</p>
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#1f2c4e] px-4 py-2 text-sm text-white/80">
+        <p className="mt-2 text-sm text-white/60">현재 보너스 잔여: {status?.bonusBalance ?? lastReward.bonusBalanceAfter}회</p>
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1f2c4e] px-3 py-1.5 text-sm text-white/80">
           <span className="material-symbols-outlined text-lg">check_circle</span>
           {lastReward.tier === "legendary"
             ? "전설 등급 당첨!"
@@ -323,8 +323,8 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
   return (
     <>
       {isOpen ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="relative w-full max-w-[420px] overflow-hidden rounded-3xl border border-white/10 bg-[#0b1120]/95 p-8 text-white shadow-[0_30px_80px_rgba(5,12,30,0.6)]">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto">
+          <div className="relative w-full max-w-[420px] rounded-3xl border border-white/10 bg-[#0b1120]/95 p-6 text-white shadow-[0_30px_80px_rgba(5,12,30,0.6)] max-h-[88vh] overflow-y-auto">
             <button
               type="button"
               onClick={closeModal}
@@ -345,7 +345,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               </p>
             </div>
 
-            <div className="mt-6 space-y-4 text-center">
+            <div className="mt-5 space-y-3 text-center">
               {errorMessage ? (
                 <div className="rounded-2xl border border-red-400/40 bg-red-400/10 px-4 py-3 text-sm text-red-100">
                   {errorMessage}
@@ -353,7 +353,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               ) : null}
 
               {isFetching ? (
-                <div className="flex flex-col items-center gap-3 rounded-3xl bg-[#121b31] px-6 py-10">
+                <div className="flex flex-col items-center gap-3 rounded-3xl bg-[#121b31] px-5 py-8">
                   <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-[#7fdcff]" />
                   <p className="text-sm text-white/70">출석 정보를 불러오는 중입니다...</p>
                 </div>
@@ -364,7 +364,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
                   type="button"
                   onClick={handleScratch}
                   disabled={isProcessing}
-                  className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#4866ff] via-[#6c8dff] to-[#9ab9ff] px-6 py-12 text-center text-[#0a1030] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-[#7fd4ff]/50 disabled:cursor-not-allowed disabled:opacity-80"
+                  className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#4866ff] via-[#6c8dff] to-[#9ab9ff] px-5 py-9 text-center text-[#0a1030] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-[#7fd4ff]/50 disabled:cursor-not-allowed disabled:opacity-80"
                 >
                   <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-20" style={{ backgroundImage: "radial-gradient(circle at top, rgba(255,255,255,0.6), transparent 60%)" }} />
                   <div className="relative flex flex-col items-center gap-3">
@@ -377,43 +377,24 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
 
               {!isFetching && !hasPendingAttendance && hasPendingAd ? (
                 <div className="space-y-4">
-                  {!adReady ? (
-                    <div className="rounded-3xl bg-[#121b31] px-6 py-6 text-sm text-white/80">
-                      <p>30초 광고를 보면 복권을 한 장 더 받을 수 있어요.</p>
-                      <p className="mt-1 text-white/60">광고 시청이 끝나면 버튼이 활성화됩니다.</p>
-                    </div>
-                  ) : null}
+                  <div className="rounded-3xl bg-[#121b31] px-5 py-5 text-sm text-white/80">
+                    <p>30초 광고 보상은 준비 중입니다.</p>
+                    <p className="mt-1 text-white/60">업데이트 후 추가 복권을 받아보세요.</p>
+                  </div>
 
-                  {!adReady ? (
-                    <button
-                      type="button"
-                      onClick={handleWatchAd}
-                      disabled={adLoading}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#3BA7FF] px-6 py-3 text-sm font-semibold text-[#02040A] shadow-[0_15px_35px_rgba(59,167,255,0.45)] transition hover:bg-[#2E8FDD] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#3BA7FF]/50 disabled:cursor-not-allowed disabled:opacity-80"
-                    >
-                      <span className="material-symbols-outlined text-lg">ondemand_video</span>
-                      {adLoading ? "광고 재생 중..." : "30초 광고 보고 복권 받기"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleScratch}
-                      disabled={isProcessing}
-                      className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#5ef7d2] via-[#61c3ff] to-[#8ca8ff] px-6 py-12 text-center text-[#03121f] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-[#6de2ff]/60 disabled:cursor-not-allowed disabled:opacity-80"
-                    >
-                      <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-20" style={{ backgroundImage: "radial-gradient(circle at top, rgba(255,255,255,0.7), transparent 60%)" }} />
-                      <div className="relative flex flex-col items-center gap-3">
-                        <span className="material-symbols-outlined text-4xl">stylus_note</span>
-                        <span className="text-xl font-bold">광고 보상 복권 긁기</span>
-                        <span className="text-xs text-[#03121f]/70">지금 바로 결과를 확인하세요.</span>
-                      </div>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white/50 cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined text-lg">lock</span>
+                    광고 시청 준비 중
+                  </button>
                 </div>
               ) : null}
 
               {!isFetching && !hasPendingAttendance && !hasPendingAd ? (
-                <div className="rounded-3xl bg-[#121b31] px-6 py-8 text-sm text-white/80">
+                <div className="rounded-3xl bg-[#121b31] px-5 py-6 text-sm text-white/80">
                   <div className="flex items-center justify-center gap-2 text-base font-semibold text-[#88f6ff]">
                     <span className="material-symbols-outlined text-lg">task_alt</span>
                     오늘 출석체크 완료!
@@ -437,7 +418,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               {renderRewardCard()}
 
               {shouldShowHistory ? (
-                <div className="mt-6 rounded-3xl bg-[#121b31] px-6 py-6">
+                <div className="mt-5 rounded-3xl bg-[#121b31] px-5 py-5">
                   <div className="flex items-center justify-between text-sm text-white/60">
                     <span>최근 보상 내역</span>
                     <span className="material-symbols-outlined text-base text-white/40">history</span>
@@ -461,7 +442,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               ) : null}
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 text-center text-xs text-white/50">
+            <div className="mt-6 flex flex-col gap-3 text-center text-xs text-white/50">
               <button
                 type="button"
                 onClick={closeModal}
