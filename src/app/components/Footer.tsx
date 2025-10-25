@@ -1,6 +1,8 @@
+import BusinessInfo from "./BusinessInfo";
+
 export default function Footer() {
   return (
-    <footer className="container-1200 relative" style={{ height: 106 }}>
+    <footer className="container-1200 relative" style={{ height: 150 }}>
       <div className="absolute left-[182px] top-[31px] w-[153px] h-[42px] bg-[url('/assets/desktop/nav_logo.png')] bg-contain bg-no-repeat" />
       {/* Social icons */}
       <a
@@ -30,6 +32,7 @@ export default function Footer() {
       >
         <img src="/assets/desktop/footer_icon_linkedin.svg" alt="linkedin" width={30} height={30} />
       </a>
+      <BusinessInfo className="absolute bottom-6 left-1/2 w-full max-w-[760px] -translate-x-1/2 px-4 text-[#8F96A6]" />
     </footer>
   );
 }

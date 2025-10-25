@@ -9,6 +9,7 @@ import PaymentPopup from "../PaymentPopup";
 import MyPage from "../MyPage";
 import AdminPanel from "../AdminPanel";
 import AttendanceModal from "../AttendanceModal";
+import BusinessInfo from "../BusinessInfo";
 
 const testimonialCards = [
   {
@@ -621,7 +622,7 @@ export default function MobileLanding() {
                       onClick={() => setPaymentPopup({ isOpen: true, planType: "ultra" })}
                       className="mt-4 w-full rounded-full border border-white/70 bg-white/10 py-2.5 text-[13px] font-semibold text-white hover:bg-white/18"
                     >
-                      Ultra 플랜 상담 신청
+                      Ultra 플랜 시작하기
                 </button>
                     </div>
                 </div>
@@ -632,6 +633,10 @@ export default function MobileLanding() {
           </div>
         </div>
       ) : null}
+
+      <footer className="mt-16 px-6 pb-10">
+        <BusinessInfo />
+      </footer>
 
       <KakaoLoginPopup isOpen={showLoginPopup} onClose={() => setShowLoginPopup(false)} onLoginSuccess={handleLoginSuccess} />
 
