@@ -26,7 +26,7 @@ const sourceSerif = Source_Serif_4({
 
 export const metadata: Metadata = {
   title: "SOLVIX | 수능 수학 AI",
-  description: "문제 올리면 풀이 도착.",
+  description: "막혔어? 올려봐!",
 };
 
 export default function RootLayout({
