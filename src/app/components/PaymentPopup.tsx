@@ -63,25 +63,25 @@ export default function PaymentPopup({ isOpen, onClose, planType }: PaymentPopup
   if (!isOpen) return null;
 
   const currentPlan = PLAN_DETAILS[planType];
-  const policies = currentPlan.policies;
+  const policies = "policies" in currentPlan ? currentPlan.policies : undefined;
 
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm px-4">
         <div className="w-full max-w-[300px] max-h-[90vh] overflow-y-auto rounded-[18px] border border-white/12 bg-[#0F1623] px-4 py-4 text-white shadow-[0_18px_54px_rgba(3,8,20,0.55)]">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">Checkout</p>
-            <h2 className="mt-1.5 text-[20px] font-semibold">결제하기</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">Checkout</p>
+              <h2 className="mt-1.5 text-[20px] font-semibold">결제하기</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
+              aria-label="닫기"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/16 hover:text-white"
-            aria-label="닫기"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-[#151F2D] p-4">
           <div className="flex items-baseline justify-between">
