@@ -473,12 +473,7 @@ function Chatbox(
     images.forEach((file) => {
       form.append("images", file);
     });
-    const useGenAi = (process.env.NEXT_PUBLIC_USE_GENAI || "").toLowerCase() === "true";
-    const endpoint = model === SOLVIX_LITE_MODEL
-      ? "/api/gemini/send"
-      : useGenAi
-        ? "/api/vertex/send/route_second"
-        : "/api/vertex/send";
+    const endpoint = "/api/deepseek/send";
     
     // Start loading state
     setIsLoading(true);

@@ -34,3 +34,29 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## DeepSeek API key setup
+
+The chat backend reads the DeepSeek key from a server-side environment variable named `DEEPSEEK_API_KEY`. Do **not** prefix this key with `NEXT_PUBLIC_`, because that would expose it to the browser.
+
+### Local development
+
+Create a `.env.local` file in the repository root and add:
+
+```bash
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key
+```
+
+Optional overrides are available if the provider endpoint, model name, or reasoning setting changes:
+
+```bash
+DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
+DEEPSEEK_MODEL_ID=deepseek-v4-pro
+DEEPSEEK_REASONING_EFFORT=max
+```
+
+Restart `npm run dev` after changing environment variables.
+
+### Vercel deployment
+
+In Vercel, open the project and go to **Settings → Environment Variables**. Add `DEEPSEEK_API_KEY` for the environments you use, usually Production, Preview, and Development. Redeploy the app after saving the variable.
