@@ -56,6 +56,7 @@ const generateId = () => {
 const MAX_IMAGES = 5;
 const SOLVIX_MAIN_MODEL = "SOLVIX 1.0";
 const SOLVIX_LITE_MODEL = "SOLVIX 1.0 LITE";
+const BASIC_FALLBACK_DAILY_FREE = 1;
 
 const getAttachmentIndicatorSrc = (count: number) => {
   const clamped = Math.min(Math.max(count, 0), MAX_IMAGES);
@@ -163,13 +164,14 @@ function Chatbox(
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => undefined);
         if (response.status === 404) {
-          setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
+          setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
           setUsageReady(true);
           return;
         }
         if (process.env.NODE_ENV !== "production") {
           console.error("Usage error", { status: response.status, payload: errorPayload ?? null });
         }
+        setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
         setUsageReady(true);
         return;
       }
@@ -179,6 +181,7 @@ function Chatbox(
       setUsageReady(true);
     } catch (error) {
       console.error("Failed to fetch usage", error);
+      setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
       setUsageReady(true);
     } finally {
       setDailyLoading(false);
@@ -452,7 +455,7 @@ function Chatbox(
 
     const totalAllowance = daily.unlimited
       ? Number.POSITIVE_INFINITY
-      : Math.max(daily.free + daily.bonus, daily.used);
+      : Math.max(daily.free + daily.bonus, daily.used, BASIC_FALLBACK_DAILY_FREE);
     if (!daily.unlimited && daily.used >= totalAllowance) {
       alert("일일 질문 횟수를 초과했습니다. 내일 다시 시도하거나 플랜을 업그레이드하세요.");
       return;
