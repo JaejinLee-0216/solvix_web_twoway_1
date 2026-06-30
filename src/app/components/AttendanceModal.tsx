@@ -45,37 +45,6 @@ type Props = {
 };
 
 const LOCAL_STORAGE_KEY = "solvix:attendanceDismissedDate";
-const AD_SIMULATION_MS = 3500;
-
-async function requestRewardedAd(): Promise<void> {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const anyWindow = window as unknown as {
-    solvixRewardedAd?: {
-      show: (callbacks: { onComplete: () => void; onError: (error?: Error) => void }) => void;
-    };
-  };
-
-  if (anyWindow.solvixRewardedAd && typeof anyWindow.solvixRewardedAd.show === "function") {
-    await new Promise<void>((resolve, reject) => {
-      try {
-        anyWindow.solvixRewardedAd?.show({
-          onComplete: resolve,
-          onError: (error) => reject(error ?? new Error("구글 광고 재생에 실패했습니다.")),
-        });
-      } catch (error) {
-        reject(error as Error);
-      }
-    });
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, AD_SIMULATION_MS);
-  });
-}
 
 export default function AttendanceModal({ isLoggedIn, userName }: Props) {
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
@@ -84,7 +53,6 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentSource, setCurrentSource] = useState<RewardSource>("attendance");
   const [reward, setReward] = useState<RewardResult | null>(null);
-  const [adLoading, setAdLoading] = useState(false);
   const [adReady, setAdReady] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -259,26 +227,6 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
     }
   }, [adReady, currentSource, isProcessing, status]);
 
-  const handleWatchAd = useCallback(async () => {
-    if (!status || adLoading) {
-      return;
-    }
-
-    try {
-      setAdLoading(true);
-      setErrorMessage(null);
-      await requestRewardedAd();
-      setAdReady(true);
-      setReward(null);
-      setCurrentSource("ad");
-    } catch (error) {
-      console.error("Rewarded ad failed", error);
-      setErrorMessage((error as Error)?.message ?? "광고를 재생하지 못했습니다. 다시 시도해주세요.");
-    } finally {
-      setAdLoading(false);
-    }
-  }, [adLoading, status]);
-
   const getCardLabel = (): string => {
     if (currentSource === "ad") {
       return adReady ? "복권을 긁어보세요" : "광고를 보면 추가 복권을 받을 수 있어요";
@@ -292,18 +240,18 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
     }
 
     return (
-      <div className="mt-4 rounded-3xl bg-gradient-to-br from-[#1b2848] via-[#14203b] to-[#10172B] px-6 py-8 text-center shadow-[0_25px_60px_rgba(10,18,40,0.45)]">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#7fdcff]">
-          <span className="material-symbols-outlined text-base">celebration</span>
+      <div className="mt-4 rounded-2xl border border-[#2A2A2A] bg-[#101010] px-5 py-6 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#1BA9FF]/40 bg-[#071622] px-3 py-1.5 text-xs font-semibold text-[#3BA7FF]">
+          <span className="material-symbols-outlined text-base">check_circle</span>
           {lastReward.source === "ad" ? "광고 보상" : "출석 보상"}
         </div>
-        <p className="mt-4 text-base text-white/80">오늘의 당첨 결과는...</p>
-        <p className="mt-2 text-4xl font-extrabold text-white">
+        <p className="mt-4 text-sm text-white/60">오늘 지급된 보상</p>
+        <p className="mt-2 text-4xl font-extrabold tracking-tight text-white">
           이용권 {lastReward.amount}회
         </p>
-        <p className="mt-2 text-sm text-white/60">현재 보너스 잔여: {status?.bonusBalance ?? lastReward.bonusBalanceAfter}회</p>
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1f2c4e] px-3 py-1.5 text-sm text-white/80">
-          <span className="material-symbols-outlined text-lg">check_circle</span>
+        <p className="mt-2 text-sm text-white/50">현재 보너스 잔여 {status?.bonusBalance ?? lastReward.bonusBalanceAfter}회</p>
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-sm text-white/70">
+          <span className="h-2 w-2 rounded-full bg-[#3BA7FF]" />
           {lastReward.tier === "legendary"
             ? "전설 등급 당첨!"
             : lastReward.tier === "epic"
@@ -323,38 +271,38 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
   return (
     <>
       {isOpen ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto">
-          <div className="relative w-full max-w-[420px] rounded-3xl border border-white/10 bg-[#0b1120]/95 p-6 text-white shadow-[0_30px_80px_rgba(5,12,30,0.6)] max-h-[88vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/75 px-4 py-6">
+          <div className="relative w-full max-w-[440px] rounded-[28px] border border-[#2A2A2A] bg-[#050505]/95 p-6 text-white shadow-[0_30px_90px_rgba(0,0,0,0.75)] max-h-[88vh] overflow-y-auto">
             <button
               type="button"
               onClick={closeModal}
-              className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/70 transition hover:bg-white/20 hover:text-white"
+              className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition hover:border-white/25 hover:bg-white/10 hover:text-white"
               aria-label="출석 팝업 닫기"
             >
               <span className="material-symbols-outlined text-xl">close</span>
             </button>
 
             <div className="flex flex-col items-center text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#13213A] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#7FD4FF]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#1BA9FF]/35 bg-[#06111A] px-4 py-2 text-xs font-semibold tracking-[0.16em] text-[#3BA7FF]">
                 <span className="material-symbols-outlined text-base">confirmation_number</span>
                 SOLVIX DAILY
               </div>
-              <h2 className="mt-4 text-2xl font-bold">오늘의 행운 복권</h2>
-              <p className="mt-2 text-sm text-white/70">
-                {userName ? `${userName}님,` : ""} 매일 방문하면 추가 이용권을 얻을 수 있어요!
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight">오늘의 복권</h2>
+              <p className="mt-2 text-sm leading-6 text-white/65">
+                {userName ? `${userName}님, ` : ""}출석하면 문제 풀이 이용권을 받을 수 있어요.
               </p>
             </div>
 
             <div className="mt-5 space-y-3 text-center">
               {errorMessage ? (
-                <div className="rounded-2xl border border-red-400/40 bg-red-400/10 px-4 py-3 text-sm text-red-100">
+                <div className="rounded-2xl border border-red-400/35 bg-red-400/10 px-4 py-3 text-sm text-red-100">
                   {errorMessage}
                 </div>
               ) : null}
 
               {isFetching ? (
-                <div className="flex flex-col items-center gap-3 rounded-3xl bg-[#121b31] px-5 py-8">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-[#7fdcff]" />
+                <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#2A2A2A] bg-[#101010] px-5 py-8">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-[#3BA7FF]" />
                   <p className="text-sm text-white/70">출석 정보를 불러오는 중입니다...</p>
                 </div>
               ) : null}
@@ -364,20 +312,20 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
                   type="button"
                   onClick={handleScratch}
                   disabled={isProcessing}
-                  className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-[#4866ff] via-[#6c8dff] to-[#9ab9ff] px-5 py-9 text-center text-[#0a1030] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-[#7fd4ff]/50 disabled:cursor-not-allowed disabled:opacity-80"
+                  className="group relative w-full overflow-hidden rounded-2xl border border-[#1BA9FF]/45 bg-[#080F15] px-5 py-8 text-center text-white transition hover:border-[#3BA7FF] hover:bg-[#0B1620] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#3BA7FF]/30 disabled:cursor-not-allowed disabled:opacity-80"
                 >
-                  <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-20" style={{ backgroundImage: "radial-gradient(circle at top, rgba(255,255,255,0.6), transparent 60%)" }} />
+                  <div className="absolute inset-x-8 top-0 h-px bg-[#3BA7FF]/60" />
                   <div className="relative flex flex-col items-center gap-3">
-                    <span className="material-symbols-outlined text-4xl">swipe_up</span>
+                    <span className="material-symbols-outlined text-4xl text-[#3BA7FF]">confirmation_number</span>
                     <span className="text-xl font-bold">{getCardLabel()}</span>
-                    <span className="text-xs text-[#0a1030]/70">터치하면 즉시 결과가 공개됩니다.</span>
+                    <span className="text-xs text-white/45">누르면 오늘의 이용권이 지급됩니다.</span>
                   </div>
                 </button>
               ) : null}
 
               {!isFetching && !hasPendingAttendance && hasPendingAd ? (
                 <div className="space-y-4">
-                  <div className="rounded-3xl bg-[#121b31] px-5 py-5 text-sm text-white/80">
+                  <div className="rounded-2xl border border-[#2A2A2A] bg-[#101010] px-5 py-5 text-sm text-white/75">
                     <p>30초 광고 보상은 준비 중입니다.</p>
                     <p className="mt-1 text-white/60">업데이트 후 추가 복권을 받아보세요.</p>
                   </div>
@@ -385,7 +333,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
                   <button
                     type="button"
                     disabled
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white/50 cursor-not-allowed"
+                    className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white/45"
                   >
                     <span className="material-symbols-outlined text-lg">lock</span>
                     광고 시청 준비 중
@@ -394,8 +342,8 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               ) : null}
 
               {!isFetching && !hasPendingAttendance && !hasPendingAd ? (
-                <div className="rounded-3xl bg-[#121b31] px-5 py-6 text-sm text-white/80">
-                  <div className="flex items-center justify-center gap-2 text-base font-semibold text-[#88f6ff]">
+                <div className="rounded-2xl border border-[#2A2A2A] bg-[#101010] px-5 py-6 text-sm text-white/75">
+                  <div className="flex items-center justify-center gap-2 text-base font-semibold text-[#3BA7FF]">
                     <span className="material-symbols-outlined text-lg">task_alt</span>
                     오늘 출석체크 완료!
                   </div>
@@ -418,21 +366,21 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               {renderRewardCard()}
 
               {shouldShowHistory ? (
-                <div className="mt-5 rounded-3xl bg-[#121b31] px-5 py-5">
+                <div className="mt-5 rounded-2xl border border-[#2A2A2A] bg-[#101010] px-5 py-5">
                   <div className="flex items-center justify-between text-sm text-white/60">
                     <span>최근 보상 내역</span>
                     <span className="material-symbols-outlined text-base text-white/40">history</span>
                   </div>
                   <ul className="mt-4 space-y-3 text-left text-sm text-white/80">
                     {status?.history?.map((entry) => (
-                      <li key={entry.id} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
+                      <li key={entry.id} className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <span className="font-semibold text-white">
                             {entry.source === "ad" ? "광고 보상" : "출석 보상"}
                           </span>
                           <span className="text-xs text-white/50">{new Date(entry.createdAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
-                        <div className="text-right text-sm font-semibold text-[#7fdcff]">
+                        <div className="text-right text-sm font-semibold text-[#3BA7FF]">
                           이용권 {entry.amount}회
                         </div>
                       </li>
@@ -446,7 +394,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="w-full rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+                className="w-full rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#3BA7FF]/60 hover:bg-[#3BA7FF]/10"
               >
                 닫기
               </button>
@@ -460,7 +408,7 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-full bg-[#3BA7FF] px-5 py-3 text-sm font-semibold text-[#02040A] shadow-lg shadow-[#3BA7FF]/30 transition hover:bg-[#2E8FDD]"
+          className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 rounded-full border border-[#3BA7FF]/50 bg-[#050505] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition hover:bg-[#071622] hover:text-[#3BA7FF]"
         >
           <span className="material-symbols-outlined text-lg">confirmation_number</span>
           오늘의 복권
@@ -469,4 +417,3 @@ export default function AttendanceModal({ isLoggedIn, userName }: Props) {
     </>
   );
 }
-
