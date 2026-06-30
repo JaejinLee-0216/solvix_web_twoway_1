@@ -56,6 +56,7 @@ const generateId = () => {
 const MAX_IMAGES = 5;
 const SOLVIX_MAIN_MODEL = "SOLVIX 1.0";
 const SOLVIX_LITE_MODEL = "SOLVIX 1.0 LITE";
+const BASIC_FALLBACK_DAILY_FREE = 1;
 
 const getAttachmentIndicatorSrc = (count: number) => {
   const clamped = Math.min(Math.max(count, 0), MAX_IMAGES);
@@ -163,13 +164,14 @@ function Chatbox(
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => undefined);
         if (response.status === 404) {
-          setDaily({ used: 0, free: 0, bonus: 0, unlimited: false });
+          setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
           setUsageReady(true);
           return;
         }
         if (process.env.NODE_ENV !== "production") {
           console.error("Usage error", { status: response.status, payload: errorPayload ?? null });
         }
+        setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
         setUsageReady(true);
         return;
       }
@@ -179,6 +181,7 @@ function Chatbox(
       setUsageReady(true);
     } catch (error) {
       console.error("Failed to fetch usage", error);
+      setDaily({ used: 0, free: BASIC_FALLBACK_DAILY_FREE, bonus: 0, unlimited: false });
       setUsageReady(true);
     } finally {
       setDailyLoading(false);
@@ -452,7 +455,7 @@ function Chatbox(
 
     const totalAllowance = daily.unlimited
       ? Number.POSITIVE_INFINITY
-      : Math.max(daily.free + daily.bonus, daily.used);
+      : Math.max(daily.free + daily.bonus, daily.used, BASIC_FALLBACK_DAILY_FREE);
     if (!daily.unlimited && daily.used >= totalAllowance) {
       alert("일일 질문 횟수를 초과했습니다. 내일 다시 시도하거나 플랜을 업그레이드하세요.");
       return;
@@ -473,12 +476,7 @@ function Chatbox(
     images.forEach((file) => {
       form.append("images", file);
     });
-    const useGenAi = (process.env.NEXT_PUBLIC_USE_GENAI || "").toLowerCase() === "true";
-    const endpoint = model === SOLVIX_LITE_MODEL
-      ? "/api/gemini/send"
-      : useGenAi
-        ? "/api/vertex/send/route_second"
-        : "/api/vertex/send";
+    const endpoint = "/api/deepseek/send";
     
     // Start loading state
     setIsLoading(true);
@@ -1119,7 +1117,7 @@ function Chatbox(
                         ))}
                       </div>
                     ) : null}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap text-white" colorScheme="dark" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
                         {copiedMessageId === m.id && (
@@ -1181,7 +1179,7 @@ function Chatbox(
                         ))}
                       </div>
                     ) : null}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap text-white" colorScheme="dark" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
                         {copiedMessageId === m.id && (
@@ -1201,13 +1199,6 @@ function Chatbox(
                         </button>
                       </div>
                     )}
-                    {extractMessageImages(m).length > 0 ? (
-                      <div className="mb-2 grid grid-cols-2 gap-2">
-                        {extractMessageImages(m).map((imgSrc, idx) => (
-                          <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-[200px] max-h-[150px] object-contain rounded" />
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
                   
                   {/* 시각화 버튼 및 시각화 (AI 답변에만 표시) */}
