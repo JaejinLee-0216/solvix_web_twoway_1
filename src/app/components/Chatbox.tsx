@@ -687,8 +687,9 @@ function Chatbox(
     }
   };
 
-  const desktopContainerStyle = !isMobile ? { top: 620 } : undefined;
-  const desktopPreviewStyle = !isMobile ? { top: 540 } : undefined;
+  const hasImageDrafts = imagePreviews.length > 0;
+  const desktopContainerStyle = !isMobile ? { top: hasImageDrafts ? 690 : 620 } : undefined;
+  const desktopPreviewStyle = !isMobile ? { top: 604 } : undefined;
   const desktopOverlayStyle = !isMobile ? { top: 260 } : undefined;
   const desktopConversationStyle = !isMobile ? { top: 260 } : undefined;
 
