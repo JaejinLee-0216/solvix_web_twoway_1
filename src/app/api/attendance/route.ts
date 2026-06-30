@@ -18,15 +18,6 @@ type DailyEngagementRow = {
   ad_reward_amount: number | null;
 };
 
-type LotteryHistoryRow = {
-  id: string;
-  source: string;
-  reward_tier: string;
-  reward_amount: number;
-  bonus_balance_after: number;
-  created_at: string;
-};
-
 function parseUserInfoCookie(request: NextRequest) {
   const cookie = request.cookies.get("userInfo");
   if (!cookie?.value) {
@@ -220,4 +211,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
