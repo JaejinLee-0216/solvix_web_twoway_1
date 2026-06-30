@@ -17,6 +17,7 @@ export default function Hero() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [imageAttached, setImageAttached] = useState(false);
+  const [conversationStarted, setConversationStarted] = useState(false);
 
   const handleLoginSuccess = (userInfo: any) => {
     if (userInfo) {
@@ -208,29 +209,32 @@ export default function Hero() {
         사진 한 장이면, 만점자 풀이가 내 손에!
       </p>
 
-      <div
-        ref={dropRef}
-        className={`group absolute left-1/2 -translate-x-1/2 top-[250px] w-[720px] h-[340px] rounded-[32px] border-2 border-dashed border-[#3BA7FF]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6 text-center transition-all duration-200 ${imageAttached ? 'bg-[#0A1625]/40' : 'bg-white/6 hover:bg-white/10 focus-within:bg-white/10'}`}
-      >
-        <button
-          type="button"
-          onClick={handleFilePick}
-          className="min-w-[220px] rounded-full bg-[#3BA7FF] px-8 py-4 text-[18px] font-semibold text-white shadow-[0_18px_38px_rgba(59,167,255,0.35)] transition-all duration-200 hover:bg-[#2F8ED6] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#3BA7FF]/35"
+      {!conversationStarted ? (
+        <div
+          ref={dropRef}
+          className={`group absolute left-1/2 -translate-x-1/2 top-[250px] w-[720px] h-[340px] rounded-[32px] border-2 border-dashed border-[#3BA7FF]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6 text-center transition-all duration-200 ${imageAttached ? 'bg-[#0A1625]/40' : 'bg-white/6 hover:bg-white/10 focus-within:bg-white/10'}`}
         >
-          {imageAttached ? '사진 교체하기' : '파일 선택하기'}
-        </button>
-        <div className="space-y-3">
-          <p className="text-[20px] font-semibold">{imageAttached ? '사진이 첨부되었습니다.' : '여기에 문제 사진을 끌어다 놓거나 클릭해서 첨부하세요'}</p>
-          <p className="text-[15px] text-white/70">선명한 사진일수록 더욱 정확한 풀이를 받을 수 있어요.</p>
+          <button
+            type="button"
+            onClick={handleFilePick}
+            className="min-w-[220px] rounded-full bg-[#3BA7FF] px-8 py-4 text-[18px] font-semibold text-white shadow-[0_18px_38px_rgba(59,167,255,0.35)] transition-all duration-200 hover:bg-[#2F8ED6] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#3BA7FF]/35"
+          >
+            {imageAttached ? '사진 교체하기' : '파일 선택하기'}
+          </button>
+          <div className="space-y-3">
+            <p className="text-[20px] font-semibold">{imageAttached ? '사진이 첨부되었습니다.' : '여기에 문제 사진을 끌어다 놓거나 클릭해서 첨부하세요'}</p>
+            <p className="text-[15px] text-white/70">선명한 사진일수록 더욱 정확한 풀이를 받을 수 있어요.</p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div id="chatbox-section">
         <Chatbox
           ref={chatboxRef}
-          onStartConversation={() => {}}
+          onStartConversation={() => setConversationStarted(true)}
           onReset={() => {
             setImageAttached(false);
+            setConversationStarted(false);
           }}
           isLoggedIn={isLoggedIn}
           onLoginRequest={() => setShowLoginPopup(true)}

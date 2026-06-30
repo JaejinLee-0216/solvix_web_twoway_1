@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../../lib/supabaseAdmin";
 
+const ADMIN_EMAILS = new Set(["victoryljj0216@kakao.com"]);
+
+const isAdminEmail = (email?: string | null) => Boolean(email && ADMIN_EMAILS.has(email.toLowerCase()));
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
@@ -103,15 +107,17 @@ export async function GET(request: NextRequest) {
     console.log("User data received:", userData.id);
 
     // 3. 사용자 정보 정리
+    const email = userData.kakao_account?.email || "";
+    const adminByEmail = isAdminEmail(email);
     const userInfo: any = {
       id: userData.id.toString(),
       kakao_id: userData.id.toString(),
       nickname: userData.kakao_account?.profile?.nickname || "사용자",
-      email: userData.kakao_account?.email || "",
+      email,
       profile_image: userData.kakao_account?.profile?.profile_image_url || null,
       provider: "kakao",
-      plan: "basic",
-      isAdmin: false,
+      plan: adminByEmail ? "ultra" : "basic",
+      isAdmin: adminByEmail,
     };
 
     // 4. Supabase에 사용자 업서트
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
           p_nickname: userInfo.nickname,
           p_email: userInfo.email,
           p_profile_image_url: userInfo.profile_image,
-          p_is_admin: false,
+          p_is_admin: adminByEmail,
         }
       );
 
@@ -149,6 +155,7 @@ export async function GET(request: NextRequest) {
               email: userInfo.email,
               profile_image_url: userInfo.profile_image,
               provider: "kakao",
+              is_admin: adminByEmail,
             },
             { onConflict: "kakao_id" }
           )
@@ -165,6 +172,22 @@ export async function GET(request: NextRequest) {
       }
 
       if (supabaseUserId) {
+        if (adminByEmail) {
+          await supabaseAdmin
+            .from("user_subscriptions")
+            .update({ status: "inactive", updated_at: new Date().toISOString() })
+            .eq("user_id", supabaseUserId)
+            .eq("status", "active");
+
+          await supabaseAdmin
+            .from("user_subscriptions")
+            .insert({ user_id: supabaseUserId, plan_type: "ultra", status: "active" });
+
+          await supabaseAdmin
+            .from("user_question_balance")
+            .upsert({ user_id: supabaseUserId, bonus_balance: 0, unlimited: true }, { onConflict: "user_id" });
+        }
+
         // 현재 플랜 조회
         const { data: currentPlan, error: planError } = await supabaseAdmin.rpc(
           "get_user_current_plan",
@@ -172,7 +195,7 @@ export async function GET(request: NextRequest) {
         );
 
         if (!planError && currentPlan) {
-          userInfo.plan = currentPlan;
+          userInfo.plan = adminByEmail ? "ultra" : currentPlan;
         }
 
         if (userInfo.isAdmin === false) {
