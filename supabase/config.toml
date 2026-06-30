@@ -1,0 +1,13 @@
+# Supabase CLI/GitHub Integration configuration for the production database.
+# Keep this file free of secrets; API keys and database passwords belong in
+# Supabase/Vercel environment variable settings, not in git.
+project_id = "solvix_latest"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+major_version = 17

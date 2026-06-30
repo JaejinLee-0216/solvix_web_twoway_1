@@ -37,7 +37,14 @@ function mapUsage(row: UsageRow, totalUsedOverride?: number) {
   };
 }
 
-function getPlanDailyLimit(plan: unknown) {
+const ADMIN_EMAILS = new Set(["victoryljj0216@kakao.com"]);
+
+function isAdminEmail(email: unknown) {
+  return typeof email === "string" && ADMIN_EMAILS.has(email.toLowerCase());
+}
+
+function getPlanDailyLimit(plan: unknown, email?: unknown) {
+  if (isAdminEmail(email)) return { freeDaily: 0, unlimited: true };
   if (plan === "pro") return { freeDaily: 10, unlimited: false };
   if (plan === "ultra") return { freeDaily: 0, unlimited: true };
   return { freeDaily: 1, unlimited: false };
@@ -100,7 +107,7 @@ function buildFallbackUsageResponse(request: NextRequest, userInfo: any, increme
   const today = getTodayKey();
   const current = store[key]?.date === today ? Math.max(store[key].used, 0) : 0;
   const nextUsed = current + Math.max(increment, 0);
-  const limit = getPlanDailyLimit(userInfo?.plan);
+  const limit = getPlanDailyLimit(userInfo?.plan, userInfo?.email);
   const row: UsageRow = {
     used_today: limit.unlimited ? nextUsed : Math.min(nextUsed, limit.freeDaily),
     free_daily: limit.freeDaily,
@@ -238,6 +245,10 @@ export async function GET(request: NextRequest) {
     if (!userInfo) {
       return NextResponse.json({ error: "Not logged in" }, { status: 401 });
     }
+    if (isAdminEmail(userInfo.email)) {
+      return buildFallbackUsageResponse(request, { ...userInfo, plan: "ultra" });
+    }
+
     const userId = await withSupabaseTimeout(resolveUserId(userInfo), "resolve usage user");
     if (!userId) {
       return buildFallbackUsageResponse(request, userInfo);
@@ -253,7 +264,7 @@ export async function GET(request: NextRequest) {
       return buildFallbackUsageResponse(request, userInfo);
     }
 
-    const fallbackLimit = getPlanDailyLimit(userInfo.plan);
+    const fallbackLimit = getPlanDailyLimit(userInfo.plan, userInfo.email);
     const row = data?.[0] ?? {
       used_today: 0,
       free_daily: fallbackLimit.freeDaily,
@@ -292,6 +303,10 @@ export async function POST(request: NextRequest) {
     const { increment = 1 } = await request.json().catch(() => ({ increment: 1 }));
     const parsedIncrement = Number.isFinite(increment) ? Number(increment) : 1;
     const appliedIncrement = Math.max(parsedIncrement, 1);
+    if (isAdminEmail(userInfo.email)) {
+      return buildFallbackUsageResponse(request, { ...userInfo, plan: "ultra" }, appliedIncrement);
+    }
+
     const userId = await withSupabaseTimeout(resolveUserId(userInfo), "resolve usage user");
     if (!userId) {
       return buildFallbackUsageResponse(request, userInfo, appliedIncrement);

@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const ADMIN_EMAILS = new Set(["victoryljj0216@kakao.com"]);
+
+const applyAdminOverrides = (user: any) => {
+  const email = typeof user?.email === "string" ? user.email.toLowerCase() : "";
+  if (!ADMIN_EMAILS.has(email)) return user;
+  return { ...user, isAdmin: true, plan: "ultra", unlimited: true };
+};
+
 export async function GET(request: NextRequest) {
   try {
     const userInfo = request.cookies.get("userInfo");
@@ -8,7 +16,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Not logged in" });
     }
 
-    const user = JSON.parse(userInfo.value);
+    const user = applyAdminOverrides(JSON.parse(userInfo.value));
     return NextResponse.json({ success: true, user });
   } catch (error) {
     console.error("Get user info error:", error);
