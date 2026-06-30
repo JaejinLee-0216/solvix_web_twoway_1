@@ -53,10 +53,14 @@ Optional overrides are available if the provider endpoint, model name, or reason
 DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
 DEEPSEEK_MODEL_ID=deepseek-v4-pro
 DEEPSEEK_REASONING_EFFORT=max
+
+# Optional: image-to-LaTeX transcription before DeepSeek
+GEMINI_OCR_API_KEY=your-google-ai-studio-api-key
+GEMINI_OCR_MODEL_ID=gemini-3.1-flash-lite
 ```
 
 Restart `npm run dev` after changing environment variables.
 
 ### Vercel deployment
 
-In Vercel, open the project and go to **Settings → Environment Variables**. Add `DEEPSEEK_API_KEY` for the environments you use, usually Production, Preview, and Development. Redeploy the app after saving the variable.
+In Vercel, open the project and go to **Settings → Environment Variables**. Add `DEEPSEEK_API_KEY` for the environments you use, usually Production, Preview, and Development. If you want image uploads to be transcribed before DeepSeek receives the request, also add `GEMINI_OCR_API_KEY` from Google AI Studio and optionally `GEMINI_OCR_MODEL_ID`. Redeploy the app after saving the variables.

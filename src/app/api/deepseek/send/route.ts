@@ -26,6 +26,7 @@ const FALLBACK_STYLE = "해설지";
 const DEEPSEEK_API_URL = process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/chat/completions";
 const DEEPSEEK_MODEL_ID = process.env.DEEPSEEK_MODEL_ID || "deepseek-v4-pro";
 const DEEPSEEK_REASONING_EFFORT = process.env.DEEPSEEK_REASONING_EFFORT || "max";
+const GEMINI_OCR_MODEL_ID = process.env.GEMINI_OCR_MODEL_ID || "gemini-3.1-flash-lite";
 
 type PreparedImage = {
   base64: string;
@@ -114,10 +115,70 @@ const persistConversation = async (
   }
 };
 
-const messageTextWithImageNotice = (text: string, imageCount: number) => {
-  if (imageCount === 0) return text;
-  const notice = `[첨부 이미지 ${imageCount}개가 있었지만 DeepSeek V4 Pro API는 현재 텍스트 입력으로 호출됩니다. 사용자가 이미지의 문제를 직접 텍스트로 옮기도록 짧게 안내하세요.]`;
-  return text ? `${text}\n\n${notice}` : notice;
+const buildUserMessage = (text: string, ocrText: string | null, imageCount: number) => {
+  const sections: string[] = [];
+  if (text.trim().length > 0) {
+    sections.push(text.trim());
+  }
+
+  if (ocrText && ocrText.trim().length > 0) {
+    sections.push(`[이미지에서 추출한 문제/수식 LaTeX]\n${ocrText.trim()}`);
+  } else if (imageCount > 0) {
+    sections.push(`[첨부 이미지 ${imageCount}개가 있었지만 이미지-텍스트 변환에 실패했습니다. 사용자가 이미지의 문제를 직접 텍스트로 옮기도록 짧게 안내하세요.]`);
+  }
+
+  return sections.join("\n\n");
+};
+
+const extractTextFromGeminiPayload = (payload: any) => {
+  if (!Array.isArray(payload?.candidates)) return "";
+  return payload.candidates
+    .map((candidate: any) => Array.isArray(candidate?.content?.parts)
+      ? candidate.content.parts.map((part: any) => part?.text).filter(Boolean).join("\n")
+      : "")
+    .filter((entry: string) => entry.length > 0)
+    .join("\n\n");
+};
+
+const transcribeImagesToLatex = async (images: PreparedImage[]) => {
+  if (images.length === 0) return null;
+
+  const geminiApiKey = process.env.GEMINI_OCR_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+  if (!geminiApiKey) {
+    console.warn("GEMINI_OCR_API_KEY or GOOGLE_GENAI_API_KEY is not configured; skipping image transcription.");
+    return null;
+  }
+
+  const prompt = String.raw`첨부된 수능 수학 문제 이미지를 읽고 DeepSeek 텍스트 모델이 바로 풀 수 있도록 텍스트로 전사해 주세요.
+
+규칙:
+- 문제의 모든 문장, 조건, 보기, 선택지를 빠짐없이 한국어로 옮깁니다.
+- 모든 수학 기호와 식은 LaTeX로 씁니다. 예: $x^2$, $\frac{1}{2}$, $\angle AOB$.
+- 도형이 있으면 점/선/원/각/음영/길이/좌표/관계를 텍스트로 설명합니다.
+- 풀이하지 말고 문제 전사만 합니다.
+- 이미지가 여러 장이면 순서대로 구분합니다.`;
+
+  const parts: any[] = [{ text: prompt }];
+  images.forEach(({ base64, mime }) => {
+    parts.push({ inline_data: { mime_type: mime, data: base64 } });
+  });
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_OCR_MODEL_ID}:generateContent?key=${geminiApiKey}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ role: "user", parts }] }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = typeof payload?.error?.message === "string" ? payload.error.message : "Gemini OCR request failed";
+    console.error("Gemini OCR error", message);
+    return null;
+  }
+
+  const textOut = extractTextFromGeminiPayload(payload).trim();
+  return textOut.length > 0 ? textOut : null;
 };
 
 export async function POST(req: NextRequest) {
@@ -159,12 +220,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const ocrText = await transcribeImagesToLatex(preparedImages);
+
   const messages: ChatMessage[] = [{ role: "system", content: DEFAULT_TUTOR_PROMPT }];
   conversationHistory.forEach((msg: any) => {
     if (typeof msg?.text !== "string" || msg.text.length === 0) return;
     messages.push({ role: msg.role === "user" ? "user" : "assistant", content: msg.text });
   });
-  messages.push({ role: "user", content: messageTextWithImageNotice(text, preparedImages.length) });
+  messages.push({ role: "user", content: buildUserMessage(text, ocrText, preparedImages.length) });
 
   const requestBody = {
     model: DEEPSEEK_MODEL_ID,

@@ -1117,7 +1117,7 @@ function Chatbox(
                         ))}
                       </div>
                     ) : null}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap text-white" colorScheme="dark" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
                         {copiedMessageId === m.id && (
@@ -1179,7 +1179,7 @@ function Chatbox(
                         ))}
                       </div>
                     ) : null}
-                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap" />
+                    <MathRenderer text={m.text} className="text-sm whitespace-pre-wrap text-white" colorScheme="dark" />
                     {m.role === 'assistant' && (
                       <div className="mt-2 flex justify-end items-center gap-2 text-right relative">
                         {copiedMessageId === m.id && (
@@ -1199,13 +1199,6 @@ function Chatbox(
                         </button>
                       </div>
                     )}
-                    {extractMessageImages(m).length > 0 ? (
-                      <div className="mb-2 grid grid-cols-2 gap-2">
-                        {extractMessageImages(m).map((imgSrc, idx) => (
-                          <img key={idx} src={imgSrc} alt={`attached-${idx + 1}`} className="max-w-[200px] max-h-[150px] object-contain rounded" />
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
                   
                   {/* 시각화 버튼 및 시각화 (AI 답변에만 표시) */}
